@@ -893,7 +893,7 @@ function genDoc(type){
     const B='<span class="offfill" style="min-width:70px">&nbsp;</span>';
     const _cty=(document.getElementById('f_county')||{}).value||'';
     const _court=_cty?_cty.replace(/[縣市]$/,''):'';
-    html=`<h2 style="text-align:center;margin-bottom:4px">${P.pn||'○○○'}停車場公告事項</h2>
+    html=`<h2 style="text-align:center;margin-bottom:4px">${P.pn||'○○○停車場'}公告事項</h2>
     <p style="text-align:center;color:#666;font-size:13px;margin-top:0">（計時計次停車場公告事項範本；空白處請依實際情形填寫）</p>
     <p><b>一、</b>本停車場停車種類及停車數：大型車 ${B} 輛，小型車 ${P.st||B} 輛，機車 ${P.mo||B} 輛，車輛使用者應按其車類停放。</p>
     <p><b>二、</b>本停車場營業時間：${P.hr||B}。</p>

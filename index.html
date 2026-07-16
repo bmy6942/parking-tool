@@ -78,6 +78,15 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
 .offtop td{border:1px solid #000;height:34px;font-size:13px;}
 .offtop .lbl{width:82px;text-align:center;background:#f2f2f2;white-space:nowrap;padding:0 4px;font-weight:bold;}
 .offtop .val{padding:0 10px;}
+.ofbox{border:1px solid #cbd5e1;border-radius:10px;padding:14px 16px;margin-top:8px;background:#f8fafc;}
+.ofhead{font-weight:bold;margin-bottom:12px;color:#1f3a5f;}
+.ofgrid{display:grid;grid-template-columns:1.1fr 1.1fr 1.9fr .75fr 1fr .85fr 1.1fr auto;gap:10px 12px;align-items:end;}
+.ofgrid .fld{display:flex;flex-direction:column;gap:5px;font-size:12px;color:#555;min-width:0;}
+.ofgrid .fld select,.ofgrid .fld input{width:100%;box-sizing:border-box;height:34px;padding:4px 8px;border:1px solid #cbd5e1;border-radius:6px;font-size:13px;background:#fff;}
+.ofgrid .ofadd{justify-content:flex-end;}
+.ofgrid .ofadd .btn{height:34px;line-height:1;white-space:nowrap;margin:0;padding:0 16px;}
+#of_list{margin-top:12px;font-size:13px;line-height:1.7;}
+@media(max-width:860px){.ofgrid{grid-template-columns:1fr 1fr 1fr;}.ofgrid .ofadd{grid-column:1/-1;justify-content:stretch;}.ofgrid .ofadd .btn{width:100%;}}
 @media print{
   .offpage{border:none;margin:0;padding:.5cm .5cm .5cm 1cm;width:auto;min-height:auto;box-shadow:none;}
   .no-print{display:none!important;}
@@ -706,19 +715,19 @@ function genOfficialMiaoli(){
   ofRenderForm();
 }
 function ofPanelHTML(){
-  return `<div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin-top:8px;background:#f8fafc">
-    <div style="font-weight:bold;margin-bottom:6px">🗂 土地標示輸入器（可多筆；段別下拉取自國土測繪地籍資料庫）</div>
-    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
-      <div><label style="font-size:12px">縣市</label><br><select id="of_county" onchange="ofLoadTowns()"><option>⏳…</option></select></div>
-      <div><label style="font-size:12px">鄉鎮市區</label><br><select id="of_town" onchange="ofLoadSects()"><option value="">—</option></select></div>
-      <div><label style="font-size:12px">段</label><br><select id="of_sect"><option value="">—</option></select></div>
-      <div><label style="font-size:12px">小段</label><br><input id="of_subsect" style="width:56px" placeholder="可空"></div>
-      <div><label style="font-size:12px">地號</label><br><input id="of_landno" style="width:88px" placeholder="1234-0"></div>
-      <div><label style="font-size:12px">面積㎡</label><br><input id="of_area" type="number" style="width:78px"></div>
-      <div><label style="font-size:12px">所有權人</label><br><input id="of_owner" style="width:88px"></div>
-      <div><button class="btn" onclick="ofAddLand()">＋加入</button></div>
+  return `<div class="ofbox">
+    <div class="ofhead">🗂 土地標示輸入器（可多筆；段別下拉取自國土測繪地籍資料庫）</div>
+    <div class="ofgrid">
+      <label class="fld">縣市<select id="of_county" onchange="ofLoadTowns()"><option>⏳…</option></select></label>
+      <label class="fld">鄉鎮市區<select id="of_town" onchange="ofLoadSects()"><option value="">—</option></select></label>
+      <label class="fld">段<select id="of_sect"><option value="">—</option></select></label>
+      <label class="fld">小段<input id="of_subsect" placeholder="可空"></label>
+      <label class="fld">地號<input id="of_landno" placeholder="1234-0"></label>
+      <label class="fld">面積㎡<input id="of_area" type="number"></label>
+      <label class="fld">所有權人<input id="of_owner"></label>
+      <div class="fld ofadd"><button class="btn" onclick="ofAddLand()">＋加入</button></div>
     </div>
-    <div id="of_list" style="margin-top:8px;font-size:13px"></div>
+    <div id="of_list"></div>
   </div>`;
 }
 async function ofInitPanel(){

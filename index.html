@@ -64,18 +64,24 @@ canvas{max-width:100%;}
 footer{text-align:center;font-size:12px;color:#999;padding:18px;}
 /* 官方格式申請書列印樣式 */
 .offform{font-family:"Microsoft JhengHei","PMingLiU",serif;color:#000;}
-.offpage{width:19cm;min-height:27cm;margin:0 auto 20px;padding:1cm;background:#fff;border:1px solid #ccc;box-sizing:border-box;position:relative;page-break-after:always;}
+.offpage{width:20.2cm;min-height:27.9cm;margin:0 auto 20px;padding:.55cm .55cm .55cm 1.1cm;background:#fff;border:1px solid #ccc;box-sizing:border-box;position:relative;page-break-after:always;}
 .offpage:last-child{page-break-after:auto;}
 .offform table{width:100%;border-collapse:collapse;}
-.offform td,.offform th{border:1px solid #000;padding:3px 5px;font-size:12px;vertical-align:middle;}
+.offform td,.offform th{border:1px solid #000;padding:4px 6px;font-size:12.5px;vertical-align:middle;}
 .offform .nob td{border:none;}
-.offbind{position:absolute;left:.4cm;top:3cm;bottom:3cm;writing-mode:vertical-rl;font-size:13px;letter-spacing:8px;color:#333;}
+.offbind{position:absolute;left:.28cm;top:3cm;bottom:3cm;writing-mode:vertical-rl;font-size:13px;letter-spacing:8px;color:#333;}
 .offtitle{text-align:center;font-size:26px;font-weight:bold;letter-spacing:10px;margin:14px 0;}
 .offfill{border-bottom:1px solid #000;display:inline-block;min-width:60px;}
-.offchk{font-size:13px;line-height:2;}
+.offchk{font-size:13px;line-height:2.1;}
+.offcb{width:15px;height:15px;vertical-align:-3px;margin:0 4px 0 0;cursor:pointer;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.offtop{border-collapse:collapse;width:56%;margin-left:44%;}
+.offtop td{border:1px solid #000;height:34px;font-size:13px;}
+.offtop .lbl{width:82px;text-align:center;background:#f2f2f2;white-space:nowrap;padding:0 4px;font-weight:bold;}
+.offtop .val{padding:0 10px;}
 @media print{
-  .offpage{border:none;margin:0;padding:1cm;width:auto;min-height:auto;box-shadow:none;}
-  @page{size:A4;margin:0;}
+  .offpage{border:none;margin:0;padding:.5cm .5cm .5cm 1cm;width:auto;min-height:auto;box-shadow:none;}
+  .no-print{display:none!important;}
+  @page{size:A4;margin:.3cm;}
 }
 .btn.on{background:var(--ok);box-shadow:inset 0 0 0 2px #1e8449;}
 .btn.gray.on{background:var(--ok);}
@@ -687,67 +693,151 @@ function genOfficial(){
   if(county==='新北市'||county==='臺北市'){svToast(county+'官方格式列印版建置中；目前請用「📄申請書草稿」＋下載官方檔');genDoc('apply');return;}
   svToast('此縣市無官方格式模板，改用通用草稿');genDoc('apply');
 }
+let ofLands=[]; // 官方表格土地標示多筆
 function genOfficialMiaoli(){
+  const dp=document.getElementById('docPreview');
+  dp.innerHTML=
+    '<div class="no-print" style="margin-bottom:10px">'
+    +'<button class="btn" onclick="window.print()">🖨 列印／存PDF（A4）</button>'
+    +'<span class="hint" style="margin-left:8px">下方「土地標示輸入器」加入地號→表格自動帶入；□框可直接點選勾選；列印時輸入器不會印出</span>'
+    +ofPanelHTML()
+    +'</div><div id="ofForm"></div>';
+  ofInitPanel();
+  ofRenderForm();
+}
+function ofPanelHTML(){
+  return `<div style="border:1px solid #cbd5e1;border-radius:8px;padding:10px;margin-top:8px;background:#f8fafc">
+    <div style="font-weight:bold;margin-bottom:6px">🗂 土地標示輸入器（可多筆；段別下拉取自國土測繪地籍資料庫）</div>
+    <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end">
+      <div><label style="font-size:12px">縣市</label><br><select id="of_county" onchange="ofLoadTowns()"><option>⏳…</option></select></div>
+      <div><label style="font-size:12px">鄉鎮市區</label><br><select id="of_town" onchange="ofLoadSects()"><option value="">—</option></select></div>
+      <div><label style="font-size:12px">段</label><br><select id="of_sect"><option value="">—</option></select></div>
+      <div><label style="font-size:12px">小段</label><br><input id="of_subsect" style="width:56px" placeholder="可空"></div>
+      <div><label style="font-size:12px">地號</label><br><input id="of_landno" style="width:88px" placeholder="1234-0"></div>
+      <div><label style="font-size:12px">面積㎡</label><br><input id="of_area" type="number" style="width:78px"></div>
+      <div><label style="font-size:12px">所有權人</label><br><input id="of_owner" style="width:88px"></div>
+      <div><button class="btn" onclick="ofAddLand()">＋加入</button></div>
+    </div>
+    <div id="of_list" style="margin-top:8px;font-size:13px"></div>
+  </div>`;
+}
+async function ofInitPanel(){
+  const cs=document.getElementById('of_county');if(!cs)return;
+  try{
+    const doc=await svXML(SV_API+'ListCounty');const items=svItems(doc,'countyItem');
+    cs.innerHTML='<option value="">選縣市</option>'+items.map(i=>`<option value="${i.countycode}">${i.countyname}</option>`).join('');
+    const want=(document.getElementById('f_county')||{}).value||'苗栗縣';
+    const hit=items.find(i=>i.countyname===want);
+    if(hit){cs.value=hit.countycode;await ofLoadTowns();}
+  }catch(e){cs.innerHTML='<option value="">縣市載入失敗（需連網）</option>';}
+  ofRenderList();
+}
+async function ofLoadTowns(){
+  const c=document.getElementById('of_county').value,ts=document.getElementById('of_town');
+  document.getElementById('of_sect').innerHTML='<option value="">—</option>';
+  if(!c){ts.innerHTML='<option value="">—</option>';return;}
+  ts.innerHTML='<option>⏳…</option>';
+  try{const doc=await svXML(SV_API+'ListTown/'+c);const items=svItems(doc,'townItem');
+    ts.innerHTML='<option value="">選鄉鎮</option>'+items.map(i=>`<option value="${i.towncode}">${i.townname}</option>`).join('');
+  }catch(e){ts.innerHTML='<option value="">載入失敗</option>';}
+}
+async function ofLoadSects(){
+  const c=document.getElementById('of_county').value,t=document.getElementById('of_town').value,ss=document.getElementById('of_sect');
+  if(!c||!t){ss.innerHTML='<option value="">—</option>';return;}
+  ss.innerHTML='<option>⏳…</option>';
+  try{const doc=await svXML(SV_API+'ListLandSection/'+c+'/'+t);const items=svItems(doc,'sectItem');
+    ss.innerHTML='<option value="">選段</option>'+items.map(i=>{const code=i.sectcode||i.sectno||'',name=i.sectname||i.sectstr||'';return `<option value="${code}" data-name="${name}">${name}（${code}）</option>`;}).join('');
+    svToast('已載入 '+items.length+' 個地段');
+  }catch(e){ss.innerHTML='<option value="">載入失敗</option>';}
+}
+function ofSelText(id,strip){const s=document.getElementById(id);if(!s||s.selectedIndex<0)return '';const o=s.options[s.selectedIndex];let v=o.dataset&&o.dataset.name?o.dataset.name:o.text;if(strip&&/^(選|—|⏳)/.test(v))v='';return v;}
+function ofAddLand(){
+  const landno=document.getElementById('of_landno').value.trim();
+  if(!landno){svToast('請輸入地號');return;}
+  ofLands.push({town:ofSelText('of_town',1),sect:ofSelText('of_sect',1),sub:document.getElementById('of_subsect').value.trim(),landno,area:document.getElementById('of_area').value.trim(),owner:document.getElementById('of_owner').value.trim()});
+  document.getElementById('of_landno').value='';document.getElementById('of_area').value='';document.getElementById('of_subsect').value='';
+  ofRenderList();ofRenderForm();
+  svToast('已加入，共 '+ofLands.length+' 筆');
+}
+function ofDelLand(i){ofLands.splice(i,1);ofRenderList();ofRenderForm();}
+function ofRenderList(){
+  const el=document.getElementById('of_list');if(!el)return;
+  if(!ofLands.length){el.innerHTML='<span style="color:#888">尚未加入地號（表格會保留5列空白供手寫）</span>';return;}
+  const sum=ofLands.reduce((a,L)=>a+(parseFloat(L.area)||0),0);
+  el.innerHTML='<b>已加入 '+ofLands.length+' 筆，合計面積 '+(sum||0).toLocaleString()+' ㎡：</b>'+ofLands.map((L,i)=>`<div style="padding:2px 0">${i+1}. ${L.town} ${L.sect} ${L.sub} <b>${L.landno}</b>地號 / ${L.area||'—'}㎡ / ${L.owner||'—'} <a href="javascript:ofDelLand(${i})" style="color:#c00;text-decoration:none">✕刪除</a></div>`).join('');
+}
+function ofRenderForm(){
   const g=id=>fv(id,'');const bl='<span class="offfill" style="min-width:120px">&nbsp;</span>';
+  const CB='<input type="checkbox" class="offcb">';
   const P={co:g('f_company'),ow:g('f_owner'),tax:g('f_taxid'),tel:g('f_tel'),ad:g('f_addr'),lo:g('f_landowner'),ar:g('f_area'),st:g('f_stalls'),mo:g('f_moto'),fe:g('f_fee'),le:g('f_lease')};
   const V=v=>v||'<span class="offfill">&nbsp;&nbsp;&nbsp;</span>';
   // 封面
   const cover=`<div class="offpage offform">
     <div class="offbind">裝　　訂　　線</div>
-    <table class="nob" style="width:60%;margin-left:40%"><tr><td style="text-align:right">收文日期：</td><td class="offfill">&nbsp;</td></tr>
-    <tr><td style="text-align:right">核准文號：</td><td class="offfill">&nbsp;</td></tr>
-    <tr><td style="text-align:right">核准期限：</td><td class="offfill">&nbsp;年&nbsp;月&nbsp;日</td></tr></table>
-    <div style="font-size:14px;margin:6px 0 0 1cm">（封面）</div>
+    <table class="offtop"><tr><td class="lbl">收文日期</td><td class="val">&nbsp;</td></tr>
+    <tr><td class="lbl">核准文號</td><td class="val">&nbsp;</td></tr>
+    <tr><td class="lbl">核准期限</td><td class="val">　　　年　　　月　　　日</td></tr></table>
+    <div style="font-size:14px;margin:6px 0 0 .3cm">（封面）</div>
     <div class="offtitle">苗栗縣利用空地申請設置<br>臨時路外停車場計畫書</div>
-    <div style="text-align:right;font-size:12px;margin-right:1cm">（框線內各空格由申請人填寫）</div>
-    <div style="border:1.5px solid #000;margin:10px 1cm;padding:16px;min-height:15cm">
-      <div style="font-size:16px;font-weight:bold">□正本　□副本</div>
+    <div style="text-align:right;font-size:12px">（框線內各空格由申請人填寫）</div>
+    <div style="border:1.5px solid #000;margin:10px .3cm;padding:18px 22px;min-height:15cm">
+      <div style="font-size:16px;font-weight:bold">${CB}正本　　${CB}副本</div>
       <div style="font-size:12px;margin-bottom:10px">※每一申請案應檢具申請書正本1份副本6份（作業須知定共送7冊）</div>
       <div style="margin:10px 0;font-size:13px">請檢核設置計畫書應含以下內容並應依序裝訂，否則將予退件。</div>
-      <table class="nob offchk"><tr><td style="width:50%">□ 1.申請書</td><td>□ 2.土地權利證明文件</td></tr>
-      <tr><td>□ 3.土地使用分區證明</td><td>□ 4.建築線指示(定)圖</td></tr>
-      <tr><td>□ 5.申請人身分證明文件</td><td>□ 6.地籍圖謄本</td></tr>
-      <tr><td colspan="2">□ 7.設置計畫書（請依利用空地申請設置臨時路外停車場辦法第九條規定編制）</td></tr>
-      <tr><td colspan="2">□ 8.水土保持計畫書（僅涉及山坡地開發時需檢附）</td></tr>
-      <tr><td colspan="2">□ 9.其他</td></tr></table>
-      <div style="margin-top:40px;font-size:14px;line-height:2.6">
+      <table class="nob offchk"><tr><td style="width:50%">${CB} 1.申請書</td><td>${CB} 2.土地權利證明文件</td></tr>
+      <tr><td>${CB} 3.土地使用分區證明</td><td>${CB} 4.建築線指示(定)圖</td></tr>
+      <tr><td>${CB} 5.申請人身分證明文件</td><td>${CB} 6.地籍圖謄本</td></tr>
+      <tr><td colspan="2">${CB} 7.設置計畫書（請依利用空地申請設置臨時路外停車場辦法第九條規定編制）</td></tr>
+      <tr><td colspan="2">${CB} 8.水土保持計畫書（僅涉及山坡地開發時需檢附）</td></tr>
+      <tr><td colspan="2">${CB} 9.其他</td></tr></table>
+      <div style="margin-top:40px;font-size:14px;line-height:2.8">
         申請人（全銜）：${V(P.co)}<br>
         負責人或代表人姓名：${V(P.ow)}<br>
         申請人通訊地址：${V(P.ad)}<br>
-        聯絡電話：${V(P.tel)}　傳真：<span class="offfill">&nbsp;</span><br>
+        聯絡電話：${V(P.tel)}　傳真：<span class="offfill" style="min-width:120px">&nbsp;</span><br>
         申請設置停車場位置：${V(P.ad)}</div>
     </div>
-    <div style="text-align:center;font-size:14px;margin-top:10px">中華民國　${bl}　年　<span class="offfill" style="min-width:40px">&nbsp;</span>　月　<span class="offfill" style="min-width:40px">&nbsp;</span>　日</div>
+    <div style="text-align:center;font-size:14px;margin-top:10px">中華民國　${bl}　年　<span class="offfill" style="min-width:50px">&nbsp;</span>　月　<span class="offfill" style="min-width:50px">&nbsp;</span>　日</div>
   </div>`;
-  // 申請表
-  const landRows=Array.from({length:5},(_,i)=>`<tr style="height:26px"><td>${i===0?(P.ad.split(/[市區]/).slice(-1)[0]||''):''}</td><td></td><td></td><td></td><td>${i===0?P.ar:''}</td><td>${i===0?P.lo:''}</td><td>${i===0?'地籍謄本':''}</td></tr>`).join('');
+  // 申請表 土地標示（多筆或5列空白）
+  const rows = ofLands.length? ofLands : null;
+  const nBlank = rows? Math.max(0, 5-rows.length) : 5;
+  let landRows='';
+  if(rows){
+    landRows = rows.map(L=>`<tr style="height:28px"><td>${P.ad.split(/[縣市]/).slice(-1)[0].replace(/[區鄉鎮市].*$/,m=>m)||''}</td><td>${L.sect||''}</td><td>${L.sub||''}</td><td>${L.landno||''}</td><td>${L.area||''}</td><td>${L.owner||''}</td><td>地籍謄本</td></tr>`).join('');
+    landRows += Array.from({length:nBlank},()=>`<tr style="height:28px"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
+  }else{
+    landRows = `<tr style="height:28px"><td>${(P.ad.match(/[一-鿿]{1,4}[區鄉鎮市]/)||[''])[0]}</td><td></td><td></td><td></td><td>${P.ar}</td><td>${P.lo}</td><td>${P.ar?'地籍謄本':''}</td></tr>`
+      + Array.from({length:4},()=>`<tr style="height:28px"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
+  }
+  const sumArea = rows? rows.reduce((a,L)=>a+(parseFloat(L.area)||0),0) : (parseFloat(P.ar)||'');
   const applyForm=`<div class="offpage offform">
     <div style="text-align:center;font-size:19px;font-weight:bold;margin-bottom:8px">苗栗縣利用空地申請設置臨時路外停車申請書</div>
     <table>
      <tr><td style="width:12%">收件日期</td><td style="width:30%"></td><td style="width:12%">收文字號</td><td></td></tr>
-     <tr><td rowspan="3" style="text-align:center">申<br>請<br>人</td><td>組織名稱</td><td colspan="2">${P.co}</td></tr>
-     <tr><td>組織型態</td><td colspan="2">□公司　□合夥　□獨資　□其他</td></tr>
-     <tr><td>負責人/身分證字號</td><td colspan="2">${P.ow}　／　${P.tax}</td></tr>
-     <tr><td>申請設置停車場地點</td><td>${P.ad}</td><td>面積(㎡)／分區</td><td>${P.ar}　／　□住宅□商業□工業□其他</td></tr>
+     <tr><td rowspan="3" style="text-align:center;width:8%">申<br>請<br>人</td><td style="width:18%">組織名稱</td><td colspan="2">${P.co}</td></tr>
+     <tr><td>組織型態</td><td colspan="2">${CB}公司　${CB}合夥　${CB}獨資　${CB}其他</td></tr>
+     <tr><td>負責人／身分證字號</td><td colspan="2">${P.ow}　／　${P.tax}</td></tr>
+     <tr><td>申請設置停車場地點</td><td>${P.ad}</td><td>面積(㎡)／分區</td><td>${P.ar}　／　${CB}住宅 ${CB}商業 ${CB}工業 ${CB}其他</td></tr>
     </table>
     <table style="margin-top:4px"><tr><td colspan="7" style="text-align:center;font-weight:bold">土地標示</td></tr>
-     <tr><th>區</th><th>段</th><th>小段</th><th>地號</th><th>面積(㎡)</th><th>所有權人</th><th>所有權證明文件</th></tr>
+     <tr><th style="width:12%">區</th><th style="width:16%">段</th><th style="width:12%">小段</th><th style="width:14%">地號</th><th style="width:14%">面積(㎡)</th><th style="width:16%">所有權人</th><th>所有權證明</th></tr>
      ${landRows}
-     <tr><td colspan="4" style="text-align:right">合計</td><td>${P.ar}</td><td colspan="2">平方公尺</td></tr>
+     <tr><td colspan="4" style="text-align:right">合計</td><td>${sumArea||''}</td><td colspan="2">平方公尺</td></tr>
     </table>
     <table style="margin-top:4px">
-     <tr><td style="width:16%">提供停車數／種類</td><td>大型車 <span class="offfill">&nbsp;</span> 輛　小型車 ${P.st||'<span class="offfill">&nbsp;</span>'} 輛　機車 ${P.mo||'<span class="offfill">&nbsp;</span>'} 輛</td></tr>
+     <tr><td style="width:18%">提供停車數／種類</td><td>大型車 <span class="offfill">&nbsp;</span> 輛　小型車 ${P.st||'<span class="offfill">&nbsp;</span>'} 輛　機車 ${P.mo||'<span class="offfill">&nbsp;</span>'} 輛</td></tr>
      <tr><td>申請使用期限</td><td>${P.le}　（最長不得超過八年）</td></tr>
-     <tr><td>鄰接道路情形</td><td>路段名 <span class="offfill">&nbsp;</span> 長 <span class="offfill" style="min-width:30px">&nbsp;</span>m 寬 <span class="offfill" style="min-width:30px">&nbsp;</span>m　｜　路段名 <span class="offfill">&nbsp;</span> 長 <span class="offfill" style="min-width:30px">&nbsp;</span>m 寬 <span class="offfill" style="min-width:30px">&nbsp;</span>m</td></tr>
+     <tr><td>鄰接道路情形</td><td>路段名 <span class="offfill">&nbsp;</span> 長 <span class="offfill" style="min-width:36px">&nbsp;</span>m 寬 <span class="offfill" style="min-width:36px">&nbsp;</span>m　｜　路段名 <span class="offfill">&nbsp;</span> 長 <span class="offfill" style="min-width:36px">&nbsp;</span>m 寬 <span class="offfill" style="min-width:36px">&nbsp;</span>m</td></tr>
     </table>
     <table style="margin-top:4px"><tr><td style="font-size:11px;line-height:1.6">
-     <b>申請有關書件：</b>一、臨時路外停車場設置申請書　二、土地權利證明文件　三、土地使用分區證明文件　四、建築線指示(定)圖　五、地籍圖謄本(應將基地範圍標示)　六、申請人身分證明文件(法人附登記文件)　七、設置計畫（1.設置地點 2.設置方式 3.停車場面積 4.停車種類 5.使用期限 6.使用管理事項含進出管制/費率/維護保養/環境維護 7.建築造型及量體圖說（管理室<10㎡臨時結構免臨建照；圍籬透空率≥70%）8.場內設施配置圖說 9.出入口配置圖說 10.交通動線圖說 11.基地現況照片）
+     <b>申請有關書件：</b>一、臨時路外停車場設置申請書　二、土地權利證明文件　三、土地使用分區證明文件　四、建築線指示(定)圖　五、地籍圖謄本(應將基地範圍標示)　六、申請人身分證明文件(法人附登記文件)　七、設置計畫（1.設置地點 2.設置方式 3.停車場面積 4.停車種類 5.使用期限 6.使用管理事項含進出管制/費率/維護保養/環境維護 7.建築造型及量體圖說（管理室&lt;10㎡臨時結構免臨建照；圍籬透空率≥70%）8.場內設施配置圖說 9.出入口配置圖說 10.交通動線圖說 11.基地現況照片）
     </td></tr></table>
     <table class="nob" style="margin-top:6px"><tr><td>此致　苗栗縣政府</td><td style="text-align:right">申請人：${P.co}　電話：${P.tel}</td></tr></table>
-    <div style="text-align:center;margin-top:6px">中華民國 ${bl} 年 <span class="offfill" style="min-width:36px">&nbsp;</span> 月 <span class="offfill" style="min-width:36px">&nbsp;</span> 日</div>
+    <div style="text-align:center;margin-top:6px">中華民國 ${bl} 年 <span class="offfill" style="min-width:44px">&nbsp;</span> 月 <span class="offfill" style="min-width:44px">&nbsp;</span> 日</div>
     <div style="font-size:10px;margin-top:8px;line-height:1.6">說明：1.法人登記文件請附公司執照影本或法人登記影本，政府機關出具公函，自然人免附。2.應檢附書件連同申請書裝訂成冊，共應檢送7冊，其中一冊之地籍圖謄本、土地登記簿謄本、土地使用權證明、分區證明應為正本，餘影本可。3.所附圖說均應述明比例尺並依比例尺繪製。</div>
   </div>`;
-  document.getElementById('docPreview').innerHTML='<div style="text-align:center;margin-bottom:8px" class="no-print"><button class="btn" onclick="window.print()">🖨 列印／存PDF（此份官方格式）</button><span class="hint" style="margin-left:8px">按列印，紙張選A4；空白欄位可手寫或先在上方基本資料填好再生成</span></div>'+cover+applyForm;
+  document.getElementById('ofForm').innerHTML=cover+applyForm;
 }
 function genDoc(type){
   const P={co:fv('f_company'),ow:fv('f_owner'),tax:fv('f_taxid'),tel:fv('f_tel'),pn:fv('f_pname'),ad:fv('f_addr'),lo:fv('f_landowner'),ar:fv('f_area'),st:fv('f_stalls'),mo:fv('f_moto','0'),hr:fv('f_hours','24 小時'),fe:fv('f_fee'),le:fv('f_lease')};

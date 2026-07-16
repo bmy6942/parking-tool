@@ -827,7 +827,7 @@ function ofRenderForm(){
      <tr><td rowspan="3" style="text-align:center;width:8%">申<br>請<br>人</td><td style="width:18%">組織名稱</td><td colspan="2">${P.co}</td></tr>
      <tr><td>組織型態</td><td colspan="2">${CB}公司　${CB}合夥　${CB}獨資　${CB}其他</td></tr>
      <tr><td>負責人／身分證字號</td><td colspan="2">${P.ow}　／　${P.tax}</td></tr>
-     <tr><td>申請設置停車場地點</td><td>${P.ad}</td><td>面積(㎡)／分區</td><td>${P.ar}　／　${CB}住宅 ${CB}商業 ${CB}工業 ${CB}其他</td></tr>
+     <tr><td>申請設置停車場地點</td><td>${P.ad}</td><td>面積(㎡)／分區</td><td>${sumArea||P.ar||''}　／　${CB}住宅 ${CB}商業 ${CB}工業 ${CB}其他</td></tr>
     </table>
     <table style="margin-top:4px"><tr><td colspan="7" style="text-align:center;font-weight:bold">土地標示</td></tr>
      <tr><th style="width:12%">區</th><th style="width:16%">段</th><th style="width:12%">小段</th><th style="width:14%">地號</th><th style="width:14%">面積(㎡)</th><th style="width:16%">所有權人</th><th>所有權證明</th></tr>
@@ -907,13 +907,14 @@ function genDoc(type){
     <p>此致　○○市（縣）政府交通局</p>
     <p style="text-align:right">申請人：${P.co}<br>負責人：${P.ow}（簽章）<br>${today()}</p>`;
   }else if(type==='rule'){
-    html=`<h2>${P.pn} 管理規範</h2>
+    html=`<h2>${P.pn||'停車場'} 管理規範</h2>
+    <p><b>場所基本資料</b>：名稱 ${P.pn||'（未填，請至基本資料填寫）'}；位置 ${P.ad||'（未填）'}；停車格位 小型車 ${P.st||'—'} 格、機車 ${P.mo||'—'} 格；營業時間 ${P.hr}；收費 ${P.fe||'（依公告費率）'}。</p>
     <p><b>一、依據</b>：依停車場法第25條／第26條訂定本規範，報請主管機關核備。</p>
     <p><b>二、營業時間</b>：${P.hr}。</p>
     <p><b>三、收費標準</b>：${P.fe}。收費標準異動時，依法報請主管機關核備後公告實施。</p>
     <p><b>四、停放規定</b>：1.車輛應依標線停放於劃設格位內，不得占用車道或跨格停放。2.場內限速 5 公里，禁鳴喇叭。3.禁止停放裝載危險物品車輛。4.引擎熄火後始得離開，貴重物品請隨身攜帶。</p>
-    <p><b>五、管理方式</b>：本場採月租制，由管理人員定期巡查；設監視系統 24 小時錄影。</p>
-    <p><b>六、賠償責任</b>：本場投保公共意外責任險。因可歸責於本場之事由致停放車輛受損者，依法負賠償責任；天災等不可抗力除外。</p>
+    <p><b>五、管理方式</b>：本場置管理人員於營業時間內定期巡查，並設置監視錄影系統維護場區安全；車輛進出管制及收費方式，依前開營業時間及收費標準辦理。</p>
+    <p><b>六、賠償責任</b>：本場依規定投保公共意外責任保險。因可歸責於本場之事由致停放車輛受損者，依法負賠償責任；天災等不可抗力除外。</p>
     <p><b>七、違規處理</b>：未經同意占用格位或任意停放妨礙他車者，依停車場法第32條移置至適當處所，費用由車主負擔。</p>
     <p><b>八、其他</b>：本規範如有未盡事宜，依停車場法及相關法令辦理。</p>
     <p style="text-align:right">經營者：${P.co}<br>負責人：${P.ow}<br>${today()}</p>`;

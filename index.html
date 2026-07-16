@@ -804,7 +804,7 @@ function ofRenderForm(){
   const nBlank = rows? Math.max(0, 5-rows.length) : 5;
   let landRows='';
   if(rows){
-    landRows = rows.map(L=>`<tr style="height:28px"><td>${P.ad.split(/[縣市]/).slice(-1)[0].replace(/[區鄉鎮市].*$/,m=>m)||''}</td><td>${L.sect||''}</td><td>${L.sub||''}</td><td>${L.landno||''}</td><td>${L.area||''}</td><td>${L.owner||''}</td><td>地籍謄本</td></tr>`).join('');
+    landRows = rows.map(L=>`<tr style="height:28px"><td>${L.town||''}</td><td>${L.sect||''}</td><td>${L.sub||''}</td><td>${L.landno||''}</td><td>${L.area||''}</td><td>${L.owner||''}</td><td>地籍謄本</td></tr>`).join('');
     landRows += Array.from({length:nBlank},()=>`<tr style="height:28px"><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
   }else{
     landRows = `<tr style="height:28px"><td>${(P.ad.match(/[一-鿿]{1,4}[區鄉鎮市]/)||[''])[0]}</td><td></td><td></td><td></td><td>${P.ar}</td><td>${P.lo}</td><td>${P.ar?'地籍謄本':''}</td></tr>`

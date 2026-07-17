@@ -175,7 +175,7 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
   <button onclick="showTab(4,this)">⑤ 縣市法規庫</button>
   <button onclick="showTab(5,this)" style="color:#8a5a00">⑥ ☀️光電申請</button>
   <button onclick="showTab(6,this);setTimeout(svInitMap,150)">⑦ 🔍場址調查</button>
-  <button onclick="showTab(7,this);gRenderGantt()" style="color:#2E6E7E">⑧ 📅建置時程</button>
+  <button onclick="showTab(7,this);gInitTab8()" style="color:#2E6E7E">⑧ 📅建置時程</button>
 </nav>
 
 <!-- ============ TAB 1 文件審查 ============ -->
@@ -713,6 +713,22 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
     <div id="ganttWrap" class="gantt-wrap"></div>
     <div id="ganttDetail" class="gantt-detail">👆 點選上方任一工項，這裡會顯示工期、期間、說明與「前往相關分頁」按鈕。</div>
     <div class="notice">⚠ 若住宅區不容許停車場用途，需另辦都市計畫變更／附條件容許使用，<b>額外增加約 12–24 個月</b>，本表未含此分支。時程為估算值，實際依主管機關審查進度與案件狀況調整。</div>
+    <div class="hint" style="margin-top:6px;color:#888">↑ 這是<b>預設參考圖</b>（固定示範時程）。下方為<b>可自訂圖</b>，改起始日或天數會即時重排。</div>
+  </div>
+
+  <div class="card">
+    <h2 style="color:#b7791f;border-left:4px solid #b7791f;padding-left:8px">✏️ 自訂時程甘特圖（可調整起始日與各項工期）</h2>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-bottom:8px">
+      <div><label style="font-size:12px">專案起始日</label><br><input type="date" id="gc_start" value="2026-08-01" onchange="gCustomCalc()" style="padding:5px 8px;border:1px solid #cbd5e1;border-radius:6px"></div>
+      <div><button class="btn small" onclick="gCustomCalc()">🔄 重新展開</button></div>
+      <div><button class="btn small gray" onclick="gCustomReset()">↩ 還原預設天數</button></div>
+    </div>
+    <div class="hint">改「起始日」或任一工項「工期(天)」，上方圖會<b>自動重新排列</b>：共用前置先行，停車場軌與太陽光電軌自共用前置完成後<b>並行</b>接續；里程碑為即時點無工期。</div>
+    <div id="gcInfo" class="hint" style="font-weight:bold;color:#8a5a00"></div>
+    <div id="gcWrap" class="gantt-wrap"></div>
+    <div id="gcDetail" class="gantt-detail" style="border-left-color:#b7791f">👆 點選上方任一工項查看細節。</div>
+    <h3 style="margin-top:14px">各工項工期（可手動輸入天數）</h3>
+    <div id="gcTable"></div>
   </div>
 </div>
 
@@ -1064,6 +1080,67 @@ function gShowTask(id){
   h+='<p style="margin:6px 0">'+t.det+'</p>';
   if(t.tab!=null){h+='<button class="btn small" onclick="event.stopPropagation();document.querySelectorAll(\'nav button\')['+t.tab+'].click()">→ 前往 '+tabNames[t.tab]+' 分頁</button>';}
   document.getElementById('ganttDetail').innerHTML=h;
+}
+let gcST={},gcEN={};
+function gInitTab8(){ gRenderGantt(); if(!document.getElementById('gc_d1')) gCustomInitTable(); gCustomCalc(); }
+function gCustomInitTable(){
+  const el=document.getElementById('gcTable'); if(!el)return;
+  const trn={shared:'共用前置',park:'停車場軌',solar:'太陽光電軌',all:'全案'};
+  let h='<table><tr><th style="width:8%">#</th><th style="width:22%">軌別</th><th>工項</th><th style="width:110px">工期(天)</th></tr>';
+  GANTT.forEach(t=>{
+    h+='<tr><td>'+(t.mile?'◆':t.id)+'</td><td><span class="g-dot g-'+t.tr+'"></span> '+trn[t.tr]+'</td><td style="font-size:12px">'+t.n+'</td><td>'+(t.mile?'<span style="color:#888">里程碑</span>':'<input type="number" id="gc_d'+t.id+'" value="'+t.d+'" min="0" style="width:80px;padding:3px 6px;border:1px solid #cbd5e1;border-radius:5px" oninput="gCustomCalc()">')+'</td></tr>';
+  });
+  h+='</table>';
+  el.innerHTML=h;
+}
+function gCustomReset(){ GANTT.forEach(t=>{ if(!t.mile){const e=document.getElementById('gc_d'+t.id); if(e)e.value=t.d;} }); const sv=document.getElementById('gc_start'); if(sv)sv.value='2026-08-01'; gCustomCalc(); }
+function gCustomCalc(){
+  const sv=document.getElementById('gc_start'); if(!sv||!sv.value)return;
+  const projS=new Date(sv.value+'T00:00:00');
+  const dur={}; GANTT.forEach(t=>{ if(t.mile){dur[t.id]=0;} else { const e=document.getElementById('gc_d'+t.id); dur[t.id]= e?(parseInt(e.value)||0):(t.d||0);} });
+  const st={},en={};
+  st[0]=new Date(projS); en[0]=new Date(projS.getTime()+dur[0]*86400000);
+  let pe=en[0]; [1,2,3,4,5].forEach(id=>{ st[id]=new Date(pe); en[id]=new Date(pe.getTime()+dur[id]*86400000); pe=en[id]; });
+  let se=en[0]; [6,7,8,9,10,11,12].forEach(id=>{ st[id]=new Date(se); en[id]=new Date(se.getTime()+dur[id]*86400000); se=en[id]; });
+  const am=Math.max(en[5].getTime(),en[12].getTime()); st[13]=new Date(am); en[13]=new Date(am);
+  gcST=st; gcEN=en; gRenderCustom(st,en,dur);
+}
+function gFmtD(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function gRenderCustom(st,en,dur){
+  const wrap=document.getElementById('gcWrap'); if(!wrap)return;
+  const allS=Object.values(st).map(d=>d.getTime()), allE=Object.values(en).map(d=>d.getTime());
+  const minD=new Date(Math.min.apply(null,allS)), maxD=new Date(Math.max.apply(null,allE));
+  const axisS=new Date(minD.getFullYear(),minD.getMonth(),1);
+  const axisE=new Date(maxD.getFullYear(),maxD.getMonth()+1,1);
+  const total=(axisE-axisS)/86400000;
+  const months=[]; let cur=new Date(axisS);
+  while(cur<axisE){ months.push(String(cur.getFullYear()).slice(2)+'/'+String(cur.getMonth()+1).padStart(2,'0')); cur.setMonth(cur.getMonth()+1); }
+  const mw=280+months.length*54;
+  let head='<div class="g-head" style="min-width:'+mw+'px"><div class="g-lbl">工項（編號）</div><div class="g-tl">'+months.map(m=>'<div class="g-mon">'+m+'</div>').join('')+'</div></div>';
+  let rows='';
+  GANTT.forEach(t=>{
+    const s=st[t.id],e=en[t.id];
+    const left=(s-axisS)/86400000/total*100;
+    const width=Math.max((e-s)/86400000/total*100,0.6);
+    let bar;
+    if(t.mile){bar='<div class="g-mile" style="left:'+left+'%" title="'+gFmtD(s)+'">◆</div>';}
+    else{bar='<div class="g-bar" style="left:'+left+'%;width:'+width+'%;background:'+G_COL[t.tr]+'" title="'+gFmtD(s)+' ~ '+gFmtD(e)+'（'+dur[t.id]+'天）">'+dur[t.id]+'天</div>';}
+    rows+='<div class="g-row" style="min-width:'+mw+'px" onclick="gShowTaskC('+t.id+')"><div class="g-lbl"><span class="g-dot g-'+t.tr+'"></span>'+(t.mile?'◆ ':(t.id+'. '))+t.n+'</div><div class="g-tl"><div class="g-grid">'+months.map(()=>'<i></i>').join('')+'</div>'+bar+'</div></div>';
+  });
+  wrap.innerHTML=head+rows;
+  const totalDays=Math.round((en[13]-st[0])/86400000);
+  const info=document.getElementById('gcInfo'); if(info) info.innerHTML='自訂後全案總工期約 '+totalDays+' 天（約 '+(totalDays/30).toFixed(1)+' 個月）｜起 '+gFmtD(st[0])+' → 完成 '+gFmtD(en[13]);
+}
+function gShowTaskC(id){
+  const t=GANTT.find(x=>x.id===id); if(!t)return;
+  const trn={shared:'共用前置',park:'停車場軌',solar:'太陽光電軌',all:'全案'}[t.tr];
+  const tabNames=['①文件審查','②文件生成','③市場調查與試算','④平面設計圖','⑤縣市法規庫','⑥光電申請','⑦場址調查'];
+  const s=gcST[id],e=gcEN[id];
+  let h='<div style="font-size:16px;font-weight:bold;color:#8a5a00">'+(t.mile?'◆ ':(t.id+'. '))+t.n+'</div>';
+  h+='<p style="margin:6px 0"><b>軌別：</b>'+trn+(t.mile?'（里程碑）':'　｜　<b>工期：</b>'+(Math.round((e-s)/86400000))+' 天')+'　｜　<b>自訂期間：</b>'+gFmtD(s)+' ～ '+gFmtD(e)+'</p>';
+  h+='<p style="margin:6px 0">'+t.det+'</p>';
+  if(t.tab!=null){h+='<button class="btn small" onclick="event.stopPropagation();document.querySelectorAll(\'nav button\')['+t.tab+'].click()">→ 前往 '+tabNames[t.tab]+' 分頁</button>';}
+  document.getElementById('gcDetail').innerHTML=h;
 }
 function genDoc(type){
   const P={co:fv('f_company'),ow:fv('f_owner'),tax:fv('f_taxid'),tel:fv('f_tel'),pn:fv('f_pname'),ad:fv('f_addr'),lo:fv('f_landowner'),ar:fv('f_area'),st:fv('f_stalls'),mo:fv('f_moto','0'),hr:fv('f_hours','24 小時'),fe:fv('f_fee'),le:fv('f_lease')};

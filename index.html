@@ -86,6 +86,26 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
 .ofgrid .ofadd{justify-content:flex-end;}
 .ofgrid .ofadd .btn{height:34px;line-height:1;white-space:nowrap;margin:0;padding:0 16px;}
 #of_list{margin-top:12px;font-size:13px;line-height:1.7;}
+/* 甘特圖 */
+.gantt-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:10px;background:#fff;margin-top:8px;}
+.g-head,.g-row{display:flex;align-items:stretch;min-width:820px;}
+.g-head{background:#f1f5f9;font-weight:bold;font-size:12px;border-bottom:2px solid #cbd5e1;position:sticky;top:0;z-index:2;}
+.g-lbl{width:280px;min-width:280px;padding:9px 10px;font-size:12.5px;box-sizing:border-box;border-right:1px solid #e2e8f0;display:flex;align-items:center;gap:7px;line-height:1.3;}
+.g-tl{flex:1;position:relative;display:flex;}
+.g-mon{flex:1;text-align:center;padding:9px 0;border-right:1px dashed #dde5ec;color:#475569;}
+.g-row{border-bottom:1px solid #f1f5f9;cursor:pointer;transition:background .15s;min-height:40px;}
+.g-row:hover{background:#f0f7f9;}
+.g-row.on{background:#e5f0f3;box-shadow:inset 3px 0 0 #2E6E7E;}
+.g-grid{position:absolute;inset:0;display:flex;pointer-events:none;}
+.g-grid i{flex:1;border-right:1px dashed #eef2f6;}
+.g-bar{position:absolute;top:50%;transform:translateY(-50%);height:22px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:bold;white-space:nowrap;transition:transform .12s,box-shadow .12s;min-width:16px;overflow:hidden;}
+.g-row:hover .g-bar{transform:translateY(-50%) scale(1.04);box-shadow:0 3px 10px rgba(0,0,0,.3);}
+.g-mile{position:absolute;top:50%;transform:translate(-50%,-50%);color:#c0392b;font-size:22px;text-shadow:0 1px 3px rgba(0,0,0,.3);line-height:1;}
+.g-dot{width:12px;height:12px;border-radius:3px;display:inline-block;flex:none;}
+.g-shared{background:#6a4c93}.g-park{background:#1F4E5F}.g-solar{background:#b7791f}.g-all{background:#c0392b}
+.gantt-detail{margin-top:12px;padding:14px 16px;border:1px solid #d7e3e8;border-left:4px solid #2E6E7E;border-radius:10px;background:#f8fbfc;min-height:44px;font-size:13px;line-height:1.75;}
+.gl{width:13px;height:13px;border-radius:3px;display:inline-block;vertical-align:-1px;margin:0 3px}
+.gl-shared{background:#6a4c93}.gl-park{background:#1F4E5F}.gl-solar{background:#b7791f}
 @media(max-width:860px){.ofgrid{grid-template-columns:1fr 1fr 1fr;}.ofgrid .ofadd{grid-column:1/-1;justify-content:stretch;}.ofgrid .ofadd .btn{width:100%;}}
 @media print{
   .offpage{border:none;margin:0;padding:.5cm .5cm .5cm 1cm;width:auto;min-height:auto;box-shadow:none;}
@@ -155,6 +175,7 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
   <button onclick="showTab(4,this)">⑤ 縣市法規庫</button>
   <button onclick="showTab(5,this)" style="color:#8a5a00">⑥ ☀️光電申請</button>
   <button onclick="showTab(6,this);setTimeout(svInitMap,150)">⑦ 🔍場址調查</button>
+  <button onclick="showTab(7,this);gRenderGantt()" style="color:#2E6E7E">⑧ 📅建置時程</button>
 </nav>
 
 <!-- ============ TAB 1 文件審查 ============ -->
@@ -684,6 +705,17 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
   </div>
 </div>
 
+<!-- ============ TAB 8 建置時程甘特圖 ============ -->
+<div class="tab" id="tab7">
+  <div class="card">
+    <h2 style="color:#2E6E7E;border-left:4px solid #2E6E7E;padding-left:8px">📅 建置時程甘特圖（私有停車場＋太陽能車棚）</h2>
+    <div class="tip" style="background:#eef6f8;border-left-color:#2E6E7E">三軌並行推進：<span class="gl gl-shared"></span>共用前置　<span class="gl gl-park"></span>停車場軌　<span class="gl gl-solar"></span>太陽光電軌　<span style="color:#c0392b">◆</span>里程碑。<b>點任一工項</b>可查看細節並一鍵跳到相關分頁。全案總工期約 <b>315 天（約 10.5 個月）</b>。</div>
+    <div id="ganttWrap" class="gantt-wrap"></div>
+    <div id="ganttDetail" class="gantt-detail">👆 點選上方任一工項，這裡會顯示工期、期間、說明與「前往相關分頁」按鈕。</div>
+    <div class="notice">⚠ 若住宅區不容許停車場用途，需另辦都市計畫變更／附條件容許使用，<b>額外增加約 12–24 個月</b>，本表未含此分支。時程為估算值，實際依主管機關審查進度與案件狀況調整。</div>
+  </div>
+</div>
+
 <footer>停車場登記申請工具箱｜法規依據：停車場法、設置再生能源設施免請領雜項執照標準（114.1.13）、115年度再生能源電能躉購費率｜本工具僅供規劃參考，正式申請以主管機關規定為準</footer>
 <script>
 /* ===================== 共用 ===================== */
@@ -986,6 +1018,52 @@ function pvExemptCheck(){
   html+='<p style="font-size:12px;margin-top:4px"><a href="https://law.moea.gov.tw/LawContent.aspx?id=FL054007" target="_blank">法規全文</a>｜<a href="https://law.moea.gov.tw/Download.ashx?FileID=190311&id=FL054007&type=LAW" target="_blank">附件二 簽證表</a>｜<a href="https://law.moea.gov.tw/Download.ashx?FileID=190312&id=FL054007&type=LAW" target="_blank">附件三 結構安全證明書</a>｜<a href="https://law.moea.gov.tw/Download.ashx?FileID=190313&id=FL054007&type=LAW" target="_blank">附件四 工程完竣證明書</a></p>';
   html+='</div>';
   R.innerHTML=html;
+}
+const GANTT=[
+ {id:0,tr:'shared',n:'土地使用分區容許使用確認（城鄉發展處）',d:30,s:'2026-08-01',e:'2026-08-31',tab:4,det:'確認基地使用分區是否容許停車場用途；非都市土地查用地類別。★關鍵前置，住宅區不容許者須另辦變更或附條件容許使用。'},
+ {id:1,tr:'park',n:'停車場設置核准申請（出入口／動線／安全）',d:45,s:'2026-08-31',e:'2026-10-15',tab:0,det:'向交通主管機關申請設置核准，敘明出入口、車行動線與安全設施（50格以上依§24先經核准）。'},
+ {id:2,tr:'park',n:'雜項執照／建築執照申請（停車場構造物）',d:60,s:'2026-10-15',e:'2026-12-14',tab:0,det:'向建管機關申請雜項/建築執照。臨時路外停車場管理室<10㎡臨時結構者免臨建照；圍籬透空率≥70%。'},
+ {id:3,tr:'park',n:'整地／鋪面／排水／車道施工（須待2號執照核發後開工）',d:90,s:'2026-12-14',e:'2027-03-14',tab:3,det:'依核准圖說施工：車位2.5×5.5m、車道寬度、排水、標線號誌、無障礙車位。★須待雜項/建照核發後始得開工。可與太陽能車棚施工同步。'},
+ {id:4,tr:'park',n:'訂定管理規範並報請核備',d:21,s:'2027-03-14',e:'2027-04-04',tab:1,det:'依停車場法§25/§26訂定停車場公告事項（管理規範），報請主管機關核備。工具②可自動生成官方格式公告事項。'},
+ {id:5,tr:'park',n:'★領得停車場登記證（可合法營業）',mile:1,s:'2027-04-04',e:'2027-04-04',tab:0,det:'停車場軌里程碑：完成上述程序後領得停車場登記證，即可合法營業。'},
+ {id:6,tr:'solar',n:'結構設計與技師簽證準備',d:45,s:'2026-08-31',e:'2026-10-15',tab:5,det:'由建築師/土木/結構技師進行結構設計與簽證準備（免雜照簽證表附件二、結構計算說明書）。'},
+ {id:7,tr:'solar',n:'台電併聯審查（申請併聯意見書）',d:60,s:'2026-10-15',e:'2026-12-14',tab:5,det:'向台電區營業處申請併聯審查，取得併聯審查意見書。車棚屬非屋頂型（地面型），詳⑥「併聯審查填寫要點」與「技術要點速查」。'},
+ {id:8,tr:'solar',n:'能源署同意備案申請',d:45,s:'2026-12-14',e:'2027-01-28',tab:5,det:'向場址所在縣市政府（未達2,000kW）申請同意備案。設置位置勾「地面型→雜項工作物→停車棚」。同意備案後2個月內與台電簽約。'},
+ {id:9,tr:'solar',n:'免雜照確認／雜項執照（依4.5m或9m高度）',d:30,s:'2027-01-28',e:'2027-02-27',tab:5,det:'依§5判斷免雜照或請雜項執照：地面預設4.5m免雜照，經核准且結合支撐架頂蓋放寬9m。可用⑥「§5免雜照自我檢核」試算。'},
+ {id:10,tr:'solar',n:'太陽能車棚施工（可與停車場鋪面同步）',d:75,s:'2027-02-27',e:'2027-05-13',tab:5,det:'車棚結構與光電模組安裝。★可與停車場鋪面施工（3號）同步進行以壓縮總工期。'},
+ {id:11,tr:'solar',n:'完工查驗＋設備登記',d:30,s:'2027-05-13',e:'2027-06-12',tab:5,det:'竣工後備查（結構安全證明書附件三、工程完竣證明書附件四）＋向縣市政府申請設備登記（附件四）＋台電會勘。115.7.1後須附模組回收費完納證明。'},
+ {id:12,tr:'solar',n:'★掛錶／簽署躉購或自用併網',mile:1,s:'2027-06-12',e:'2027-06-12',tab:5,det:'太陽光電軌里程碑：完成併網掛錶，簽署躉購或自發自用，開始售電/發電。躉購20年自首次併聯日起算。'},
+ {id:13,tr:'all',n:'★全案完成：停車場登記證＋太陽光電同步完工營運',mile:1,s:'2027-06-12',e:'2027-06-12',tab:null,det:'全案里程碑：停車場合法營業＋太陽能車棚併網售電同步達成，約自起算日 10.5 個月。'}
+];
+const G_MONTHS=['26/08','26/09','26/10','26/11','26/12','27/01','27/02','27/03','27/04','27/05','27/06'];
+const G_COL={shared:'linear-gradient(90deg,#8e6bb5,#6a4c93)',park:'linear-gradient(90deg,#3a8296,#1F4E5F)',solar:'linear-gradient(90deg,#e3ab43,#b7791f)',all:'linear-gradient(90deg,#e05a4a,#c0392b)'};
+function gRenderGantt(){
+  const wrap=document.getElementById('ganttWrap'); if(!wrap)return;
+  const projS=new Date('2026-08-01'),projE=new Date('2027-06-12'),total=(projE-projS)/86400000;
+  let head='<div class="g-head"><div class="g-lbl">工項（編號）</div><div class="g-tl">'+G_MONTHS.map(m=>'<div class="g-mon">'+m+'</div>').join('')+'</div></div>';
+  let rows='';
+  GANTT.forEach(t=>{
+    const s=new Date(t.s),e=new Date(t.e);
+    const left=(s-projS)/86400000/total*100;
+    const width=Math.max((e-s)/86400000/total*100,0.6);
+    let bar;
+    if(t.mile){bar='<div class="g-mile" style="left:'+left+'%">◆</div>';}
+    else{bar='<div class="g-bar" style="left:'+left+'%;width:'+width+'%;background:'+G_COL[t.tr]+'">'+t.d+'天</div>';}
+    rows+='<div class="g-row" id="grow'+t.id+'" onclick="gShowTask('+t.id+')"><div class="g-lbl"><span class="g-dot g-'+t.tr+'"></span>'+(t.mile?'◆ ':(t.id+'. '))+t.n+'</div><div class="g-tl"><div class="g-grid">'+G_MONTHS.map(()=>'<i></i>').join('')+'</div>'+bar+'</div></div>';
+  });
+  wrap.innerHTML=head+rows;
+}
+function gShowTask(id){
+  const t=GANTT.find(x=>x.id===id); if(!t)return;
+  document.querySelectorAll('.g-row').forEach(r=>r.classList.remove('on'));
+  const row=document.getElementById('grow'+id); if(row)row.classList.add('on');
+  const trn={shared:'共用前置',park:'停車場軌',solar:'太陽光電軌',all:'全案'}[t.tr];
+  const tabNames=['①文件審查','②文件生成','③市場調查與試算','④平面設計圖','⑤縣市法規庫','⑥光電申請','⑦場址調查'];
+  let h='<div style="font-size:16px;font-weight:bold;color:#1F4E5F">'+(t.mile?'◆ ':(t.id+'. '))+t.n+'</div>';
+  h+='<p style="margin:6px 0"><b>軌別：</b>'+trn+(t.mile?'（里程碑）':'　｜　<b>工期：</b>'+t.d+' 天')+'　｜　<b>期間：</b>'+t.s+' ～ '+t.e+'</p>';
+  h+='<p style="margin:6px 0">'+t.det+'</p>';
+  if(t.tab!=null){h+='<button class="btn small" onclick="event.stopPropagation();document.querySelectorAll(\'nav button\')['+t.tab+'].click()">→ 前往 '+tabNames[t.tab]+' 分頁</button>';}
+  document.getElementById('ganttDetail').innerHTML=h;
 }
 function genDoc(type){
   const P={co:fv('f_company'),ow:fv('f_owner'),tax:fv('f_taxid'),tel:fv('f_tel'),pn:fv('f_pname'),ad:fv('f_addr'),lo:fv('f_landowner'),ar:fv('f_area'),st:fv('f_stalls'),mo:fv('f_moto','0'),hr:fv('f_hours','24 小時'),fe:fv('f_fee'),le:fv('f_lease')};

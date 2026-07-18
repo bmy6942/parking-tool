@@ -1290,7 +1290,8 @@ function drawLot(){
   const cv=document.getElementById('lotCanvas'), ctx=cv.getContext('2d');
   const innerW=W-2*mg, innerD=D-2*mg;
   if(innerW<sw||innerD<sl){ctx.clearRect(0,0,cv.width,cv.height);return;}
-  // 估算車道列數，決定是否需要側邊聯絡車道
+  const walk=1.5; // 人行步道
+  // 列規劃（stall/aisle 交替，單面靠道）
   let rows=[],rem=innerD,y=0;
   while(true){
     if(rem>=sl+aw){rows.push({t:'stall',y});y+=sl;rows.push({t:'aisle',y});y+=aw;rem-=sl+aw;}
@@ -1298,62 +1299,142 @@ function drawLot(){
     else break;
   }
   const aisleCount=rows.filter(r=>r.t==='aisle').length;
-  const sideLane=aisleCount>1?aw:0; // 多列車道時保留側邊聯絡道
-  const usableW=innerW-sideLane;
-  const nPerRow=Math.floor(usableW/sw);
-  // 繪圖
-  const scale=Math.min(950/W,650/D);
-  cv.width=Math.round(W*scale)+50; cv.height=Math.round(D*scale)+50;
+  const sideLane=aisleCount>1?aw:0;                // 迴車道/聯絡道
+  const usableW=innerW-sideLane-walk;              // 扣掉迴車道與人行步道
+  const nPerRow=Math.max(0,Math.floor(usableW/sw));
+  // 先估總數以決定無障礙數
+  const stallRowCount=rows.filter(r=>r.t==='stall').length;
+  const rawTotal=stallRowCount*nPerRow;
+  const accessible=Math.max(1,Math.ceil(rawTotal/50));
+  const lastStallY=Math.max(...rows.filter(r=>r.t==='stall').map(r=>r.y));
+  // 版面（留白給標題/圖例/比例尺/附註）
+  const mL=90,mT=66,mR=230,mB=196;
+  const scale=Math.min(770/(W||1),520/(D||1));
+  const siteW=W*scale, siteH=D*scale;
+  cv.width=Math.round(mL+siteW+mR); cv.height=Math.round(mT+siteH+mB);
+  const ox=mL, oy=mT, S=scale;
   ctx.clearRect(0,0,cv.width,cv.height);
-  const ox=25,oy=25;
-  ctx.fillStyle='#f8f8f4';ctx.fillRect(ox,oy,W*scale,D*scale);
-  ctx.strokeStyle='#333';ctx.lineWidth=2;ctx.strokeRect(ox,oy,W*scale,D*scale);
-  // 尺寸標註
-  ctx.fillStyle='#555';ctx.font='13px sans-serif';ctx.textAlign='center';
-  ctx.fillText(W+' m',ox+W*scale/2,oy-8);
-  ctx.save();ctx.translate(ox-8,oy+D*scale/2);ctx.rotate(-Math.PI/2);ctx.fillText(D+' m',0,0);ctx.restore();
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,cv.width,cv.height);
+  function arrow(x1,y1,x2,y2,col,wd){ctx.strokeStyle=col;ctx.fillStyle=col;ctx.lineWidth=wd||2;ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();const a=Math.atan2(y2-y1,x2-x1),h=7;ctx.beginPath();ctx.moveTo(x2,y2);ctx.lineTo(x2-h*Math.cos(a-0.4),y2-h*Math.sin(a-0.4));ctx.lineTo(x2-h*Math.cos(a+0.4),y2-h*Math.sin(a+0.4));ctx.closePath();ctx.fill();}
+  // ===== 標題 =====
+  ctx.textAlign='left';ctx.fillStyle='#16323d';ctx.font='bold 20px "Microsoft JhengHei",sans-serif';
+  ctx.fillText('停車場配置圖（停車場登記證申請 參考用）',ox,26);
+  ctx.fillStyle='#555';ctx.font='12px "Microsoft JhengHei",sans-serif';
+  ctx.fillText('SCALE 1:200（示意）　基地 '+W.toFixed(1)+' m × '+D.toFixed(1)+' m ＝ '+fmt(W*D)+' ㎡',ox,46);
+  // ===== 基地底 =====
+  ctx.fillStyle='#eef2f6';ctx.fillRect(ox,oy,siteW,siteH);
+  ctx.strokeStyle='#2b2b2b';ctx.lineWidth=2.5;ctx.strokeRect(ox,oy,siteW,siteH);
+  // ===== 人行步道（右側內緣）=====
+  const walkX=ox+(mg+innerW-walk)*S, walkOn=innerW>walk+sw;
+  if(walkOn){ctx.fillStyle='#f2e4c9';ctx.fillRect(walkX,oy+mg*S,walk*S,innerD*S);
+    ctx.save();ctx.translate(walkX+walk*S/2,oy+mg*S+innerD*S/2);ctx.rotate(-Math.PI/2);ctx.fillStyle='#a9863c';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('人行步道 '+walk+'m',0,4);ctx.restore();}
+  // ===== 迴車道（左右）=====
+  if(sideLane){ctx.fillStyle='rgba(214,229,234,.75)';ctx.fillRect(ox+mg*S,oy+mg*S,sideLane*S,innerD*S);
+    ctx.save();ctx.translate(ox+(mg+sideLane/2)*S,oy+mg*S+innerD*S/2);ctx.rotate(-Math.PI/2);ctx.fillStyle='#5f8894';ctx.font='11px sans-serif';ctx.textAlign='center';ctx.fillText('迴車道 '+aw+'m',0,4);ctx.restore();}
+  // ===== 車位＋車道 =====
   stallRects=[];let count=0,num=0;
   rows.forEach(r=>{
-    const ry=oy+(mg+r.y)*scale;
+    const ry=oy+(mg+r.y)*S;
     if(r.t==='aisle'){
-      ctx.fillStyle='#dfe9ec';ctx.fillRect(ox+mg*scale,ry,innerW*scale,aw*scale);
-      ctx.fillStyle='#8aa5ad';ctx.font='12px sans-serif';
-      ctx.fillText('車道 '+aw+'m ⇄',ox+mg*scale+innerW*scale/2,ry+aw*scale/2+4);
+      ctx.fillStyle='#dbe9ef';ctx.fillRect(ox+(mg+sideLane)*S,ry,(usableW)*S,aw*S);
+      const cx=ox+(mg+sideLane)*S, cw=usableW*S, cy=ry+aw*S/2;
+      const dir=(rows.indexOf(r)/2)%2===0?1:-1;
+      if(dir>0)arrow(cx+cw*0.62,cy,cx+cw*0.9,cy,'#3f6d8c',2.4); else arrow(cx+cw*0.38,cy,cx+cw*0.1,cy,'#3f6d8c',2.4);
+      ctx.fillStyle='#2f5b74';ctx.font='bold 12px sans-serif';ctx.textAlign='center';
+      ctx.fillText('雙向車道 W = '+aw.toFixed(2)+' m',cx+cw*0.35,cy+4);
     }else{
-      for(let i=0;i<nPerRow;i++){
+      const isLast=(r.y===lastStallY);
+      let xCursor=ox+(mg+sideLane)*S, placed=0, colsLeft=nPerRow;
+      // 無障礙（僅最後一列，靠入口側=左）
+      if(isLast){
+        const aWm=3.5;
+        for(let k=0;k<accessible && colsLeft>=Math.ceil(aWm/sw);k++){
+          const wpx=aWm*S;
+          ctx.fillStyle='#cfe8d6';ctx.fillRect(xCursor,ry,wpx,sl*S);
+          ctx.strokeStyle='#3a8a55';ctx.lineWidth=1.3;ctx.strokeRect(xCursor,ry,wpx,sl*S);
+          ctx.strokeStyle='#3a8a55';ctx.beginPath();ctx.moveTo(xCursor+4,ry+4);ctx.lineTo(xCursor+wpx-4,ry+sl*S-4);ctx.moveTo(xCursor+wpx-4,ry+4);ctx.lineTo(xCursor+4,ry+sl*S-4);ctx.stroke();
+          ctx.fillStyle='#2c7a45';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('無障礙',xCursor+wpx/2,ry+sl*S-6);
+          xCursor+=wpx; const used=Math.ceil(aWm/sw); colsLeft-=used; placed+=used;
+        }
+      }
+      for(let i=0;i<colsLeft;i++){
         num++;const key='s'+num;
-        const rx=ox+(mg+sideLane+i*sw)*scale;
+        const rx=xCursor+i*sw*S;
         const dead=disabledStalls[key];
-        ctx.fillStyle=dead?'#e8b4ae':'#ffffff';
-        ctx.fillRect(rx,ry,sw*scale,sl*scale);
-        ctx.strokeStyle='#999';ctx.lineWidth=1;ctx.strokeRect(rx,ry,sw*scale,sl*scale);
-        ctx.fillStyle=dead?'#a33':'#666';ctx.font=(sw*scale>26?'11px':'9px')+' sans-serif';
-        ctx.fillText(dead?'✕':num,rx+sw*scale/2,ry+sl*scale/2+4);
-        stallRects.push({key,x:rx,y:ry,w:sw*scale,h:sl*scale});
+        ctx.fillStyle=dead?'#e8b4ae':'#ffffff';ctx.fillRect(rx,ry,sw*S,sl*S);
+        ctx.strokeStyle='#8a8a8a';ctx.lineWidth=1;ctx.strokeRect(rx,ry,sw*S,sl*S);
+        ctx.fillStyle=dead?'#a33':'#555';ctx.font=(sw*S>26?'11px':'9px')+' sans-serif';ctx.textAlign='center';
+        ctx.fillText(dead?'✕':num,rx+sw*S/2,ry+sl*S/2+4);
+        stallRects.push({key,x:rx,y:ry,w:sw*S,h:sl*S});
         if(!dead)count++;
       }
     }
   });
-  // 側邊聯絡車道
-  if(sideLane){
-    ctx.fillStyle='rgba(223,233,236,.85)';
-    ctx.fillRect(ox+mg*scale,oy+mg*scale,sideLane*scale,innerD*scale);
-    ctx.save();ctx.translate(ox+(mg+sideLane/2)*scale,oy+mg*scale+innerD*scale/2);ctx.rotate(-Math.PI/2);
-    ctx.fillStyle='#8aa5ad';ctx.fillText('聯絡車道 '+aw+'m',0,4);ctx.restore();
+  // ===== 尺寸標註 =====
+  ctx.strokeStyle='#888';ctx.lineWidth=1;ctx.fillStyle='#444';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.beginPath();ctx.moveTo(ox,oy-14);ctx.lineTo(ox+siteW,oy-14);ctx.stroke();
+  ctx.fillText('基地寬 '+W.toFixed(2)+' m',ox+siteW/2,oy-18);
+  ctx.save();ctx.translate(ox-18,oy+siteH/2);ctx.rotate(-Math.PI/2);ctx.fillText('基地深 '+D.toFixed(2)+' m',0,0);ctx.restore();
+  ctx.fillStyle='#777';ctx.font='10px sans-serif';
+  ctx.fillText('車位 '+sw.toFixed(2)+'×'+sl.toFixed(2),ox+(mg+sideLane+sw)*S,oy+8);
+  // ===== 出入口區（下方）=====
+  const gy=oy+siteH; const bufTxtY=gy-6;
+  ctx.fillStyle='#3f6d8c';ctx.font='11px sans-serif';ctx.textAlign='center';
+  ctx.fillText('出入口內側轉彎半徑 R = 5.00 m　｜　緩衝車道 7.00 m',ox+siteW*0.42,bufTxtY);
+  function gate(cx,col,label){
+    ctx.strokeStyle='#c69a5a';ctx.lineWidth=2;
+    ctx.beginPath();ctx.arc(cx-24,gy,26,-Math.PI/2,0);ctx.stroke();
+    ctx.beginPath();ctx.arc(cx+24,gy,26,Math.PI,-Math.PI/2,true);ctx.stroke();
+    ctx.fillStyle=col;ctx.fillRect(cx-16,gy-4,32,12);
+    ctx.fillStyle=col;ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText(label+' W=3.5m',cx,gy+26);
   }
-  // 出入口
-  const firstAisle=rows.find(r=>r.t==='aisle');
-  if(firstAisle){
-    const ey=oy+(mg+firstAisle.y)*scale;
-    ctx.fillStyle='#27ae60';ctx.fillRect(ox-4,ey,8,aw*scale);
-    ctx.fillStyle='#27ae60';ctx.font='bold 12px sans-serif';ctx.textAlign='left';
-    ctx.fillText('▶ 出入口',ox+6,ey-4);ctx.textAlign='center';
-  }
-  const accessible=Math.max(1,Math.ceil(count/50));
+  gate(ox+siteW*0.22,'#1f8a4c','入口');
+  gate(ox+siteW*0.62,'#c0392b','出口');
+  ctx.fillStyle='#c0392b';ctx.font='10px sans-serif';ctx.fillText('◤停車再開◢／反射鏡●／警示燈',ox+siteW*0.62,gy+40);
+  // ===== 收費亭/管理室 =====
+  ctx.fillStyle='#6a4c93';ctx.fillRect(ox+siteW*0.22-14,gy-4-16,28,14);
+  ctx.fillStyle='#fff';ctx.font='9px sans-serif';ctx.textAlign='center';ctx.fillText('收費亭',ox+siteW*0.22,gy-4-5);
+  // ===== 照明（沿車道邊）＋消防＋排水 =====
+  rows.filter(r=>r.t==='aisle').forEach(r=>{const ry=oy+(mg+r.y)*S;for(let gx=0.15;gx<0.95;gx+=0.2){const px=ox+(mg+sideLane)*S+usableW*S*gx;ctx.fillStyle='#f2b705';ctx.beginPath();ctx.arc(px,ry+2,3,0,7);ctx.fill();}});
+  ctx.fillStyle='#c0392b';ctx.font='bold 10px sans-serif';ctx.textAlign='center';
+  ctx.fillText('🧯',ox+(mg+sideLane)*S+10,oy+(mg+2)*S+6);
+  ctx.fillText('🧯',walkOn?walkX-10:ox+siteW-14,oy+siteH-8);
+  ctx.strokeStyle='#4a90c2';ctx.lineWidth=1;ctx.setLineDash([5,4]);
+  ctx.beginPath();ctx.moveTo(ox+4,oy+siteH-6);ctx.lineTo(ox+siteW-4,oy+siteH-6);ctx.stroke();ctx.setLineDash([]);
+  ctx.fillStyle='#4a90c2';ctx.font='9px sans-serif';ctx.textAlign='left';ctx.fillText('排水溝／集水井（虛線）',ox+6,oy+siteH-9);
+  // ===== 圖例（右上）=====
+  let lx=ox+siteW+24, ly=oy+4; ctx.textAlign='left';
+  ctx.fillStyle='#16323d';ctx.font='bold 13px "Microsoft JhengHei",sans-serif';ctx.fillText('圖例',lx,ly+2);ly+=14;
+  const leg=[['#ffffff','#8a8a8a','標準車位 '+sw+'×'+sl],['#cfe8d6','#3a8a55','無障礙 3.5×'+sl],['#dbe9ef','#dbe9ef','行車動線／車道'],['#f2e4c9','#f2e4c9','人行步道 '+walk+'m'],['#6a4c93','#6a4c93','收費亭／管理室'],['#f2b705','#f2b705','照明'],['#c0392b','#c0392b','消防／反射鏡']];
+  leg.forEach(it=>{ctx.fillStyle=it[0];ctx.fillRect(lx,ly,16,12);ctx.strokeStyle=it[1];ctx.lineWidth=1;ctx.strokeRect(lx,ly,16,12);ctx.fillStyle='#333';ctx.font='11px "Microsoft JhengHei",sans-serif';ctx.fillText(it[2],lx+22,ly+10);ly+=19;});
+  // ===== 比例尺 =====
+  const sbY=oy+siteH+mB-46, sb=10*S; // 10m
+  ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.4;ctx.font='10px sans-serif';ctx.textAlign='center';
+  for(let k=0;k<5;k++){ctx.fillStyle=k%2?'#fff':'#222';ctx.fillRect(ox+sb*k/5,sbY,sb/5,7);ctx.strokeRect(ox+sb*k/5,sbY,sb/5,7);}
+  ctx.fillStyle='#222';ctx.fillText('0',ox,sbY+20);ctx.fillText('10 m',ox+sb,sbY+20);
+  // ===== 指北針 =====
+  const nx=ox+siteW+mR-60, ny=oy+siteH+mB-70;
+  ctx.strokeStyle='#222';ctx.fillStyle='#222';ctx.lineWidth=1.6;
+  ctx.beginPath();ctx.moveTo(nx,ny-22);ctx.lineTo(nx-8,ny+8);ctx.lineTo(nx,ny+2);ctx.lineTo(nx+8,ny+8);ctx.closePath();ctx.fill();
+  ctx.font='bold 13px sans-serif';ctx.textAlign='center';ctx.fillText('N',nx,ny+22);
+  // ===== 法規依據附註 =====
+  const noteY=oy+siteH+70; ctx.textAlign='left';ctx.fillStyle='#333';
+  ctx.font='bold 11px "Microsoft JhengHei",sans-serif';ctx.fillText('法規依據：建築技術規則建築設計施工編 §59～§61、各縣市停車場管理自治條例',ox,noteY);
+  const notes=['1. 小型車位 2.50×'+sl.toFixed(2)+' m；無障礙 3.50×'+sl.toFixed(2)+' m（含下車空間）；淨高 ≧ 2.10 m。',
+   '2. 車道：單向 ≧ 3.50 m、雙向 ≧ 5.50 m（本案採 '+aw.toFixed(2)+' m）；淨高 ≧ 2.10 m。',
+   '3. 出入口寬 ≧ 3.50 m；內側轉彎半徑 ≧ 5.00 m；車道坡度 ≦ 1:6。',
+   '4. 出入口距交叉口/人行穿越道/公車招呼站 ≧ 7.50 m；內側留 6～7 m 緩衝車道。',
+   '5. 車位 50 席以上宜設進、出分離之雙出入口，並設停車再開標線、反射鏡與警示燈。',
+   '6. 圖上應標示：車位編號、行車方向、照明、排水、消防設備、收費亭／管理室位置。',
+   '※ 本圖僅為配置概念參考；正式申請圖說須由建築師／專業技師依實際地籍及現況測量後簽證。'];
+  ctx.font='10px "Microsoft JhengHei",sans-serif';ctx.fillStyle='#444';
+  notes.forEach((t,i)=>ctx.fillText(t,ox,noteY+16+i*14));
+  // ===== 統計 =====
+  const total=count+accessible;
   document.getElementById('lotStats').innerHTML=`
-   <div class="stat hl"><div class="v">${count}</div><div class="l">可用車位數</div></div>
-   <div class="stat"><div class="v">${count>=50?'§24(需建照)':'§26(輕量路徑)'}</div><div class="l">適用申請條款</div></div>
-   <div class="stat"><div class="v">${accessible}</div><div class="l">建議無障礙車位(格)</div></div>
+   <div class="stat hl"><div class="v">${total}</div><div class="l">合計車位（含無障礙${accessible}）</div></div>
+   <div class="stat"><div class="v">${total>=50?'§24(需建照)':'§26(輕量路徑)'}</div><div class="l">適用申請條款</div></div>
+   <div class="stat"><div class="v">${accessible}</div><div class="l">無障礙車位(格)</div></div>
    <div class="stat"><div class="v">${fmt(count*4)} kW</div><div class="l">車棚光電容量估算(4kW/格)</div></div>
    <div class="stat"><div class="v">${fmt(W*D)} ㎡</div><div class="l">基地面積</div></div>`;
 }

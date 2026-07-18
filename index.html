@@ -862,8 +862,50 @@ function renderCountyDoc(){
 function genOfficial(){
   const county=(document.getElementById('f_county')||{}).value||'通用';
   if(county==='苗栗縣'){genOfficialMiaoli();return;}
-  if(county==='新北市'||county==='臺北市'){svToast(county+'官方格式列印版建置中；目前請用「📄申請書草稿」＋下載官方檔');genDoc('apply');return;}
-  svToast('此縣市無官方格式模板，改用通用草稿');genDoc('apply');
+  if(county==='宜蘭縣'){genOfficialYilan();return;}
+  const cd=(typeof DOC_COUNTY!=='undefined')&&DOC_COUNTY[county];
+  if(cd){ // 有官方表格但工具尚未內建列印版 → 強制走官方，不提供自製格式作為正式件
+    document.getElementById('docPreview').innerHTML='<div class="notice" style="border-left:4px solid #c0392b">⚠ <b>'+county+'訂有官方制式表格，正式申請一律使用官方格式</b>，本工具不提供自製格式作為送件文件。<br>請至下列官方來源下載填寫：'+cd.forms.map(x=>x[1]==='local'?'<b>'+x[0]+'</b>':'<a href="'+x[1]+'" target="_blank">'+x[0]+'</a>').join('｜')+'<br>（下方為內容參考草稿，僅供備妥資料之用，切勿作為正式送件表格。）</div>';
+    genDocAppend('apply'); return;
+  }
+  svToast('此縣市無官方制式表格，使用通用草稿');genDoc('apply');
+}
+function genDocAppend(type){ const prev=document.getElementById('docPreview').innerHTML; genDoc(type); document.getElementById('docPreview').innerHTML=prev+document.getElementById('docPreview').innerHTML; }
+function genOfficialYilan(){
+  const g=id=>fv(id,'');const B='<span class="offfill">&nbsp;</span>';
+  const CB='<input type="checkbox" class="offcb">';const CBc='<input type="checkbox" class="offcb" checked>';
+  const P={co:g('f_company'),ow:g('f_owner'),tax:g('f_taxid'),tel:g('f_tel'),ad:g('f_addr'),pn:g('f_pname'),st:g('f_stalls'),mo:g('f_moto'),fe:g('f_fee'),hr:g('f_hours')};
+  const V=v=>v||'<span class="offfill">&nbsp;&nbsp;</span>';
+  const form=`<div class="offpage offform">
+    <div style="text-align:right;font-size:12px">附件一</div>
+    <div style="text-align:center;font-size:19px;font-weight:bold;margin-bottom:2px">宜蘭縣停車場經營登記申請書</div>
+    <div style="text-align:center;font-size:12px;margin-bottom:6px">中華民國　${B}　年　${B}　月　${B}　日</div>
+    <table>
+     <tr><td colspan="4">受文者：宜蘭縣政府</td></tr>
+     <tr><td rowspan="4" style="width:7%;text-align:center">申<br>請<br>人</td><td style="width:18%">經營者名稱</td><td>${P.co} <span style="color:#888;font-size:11px">（自然人免填）</span></td><td style="width:26%;text-align:center">公司或商號印章／負責人印章<br><span style="color:#888;font-size:11px">（用印處）</span></td></tr>
+     <tr><td>地址</td><td colspan="2">${V(P.ad)} <span style="color:#888;font-size:11px">（自然人免填）</span></td></tr>
+     <tr><td>組織型態</td><td colspan="2">${CB}公司　${CB}合夥　${CB}獨資　${CB}其他</td></tr>
+     <tr><td>負責人</td><td colspan="2">姓名 ${V(P.ow)}　出生年月日 ${B}　身分證統一編號 ${V(P.tax)}　地址 ${V(P.ad)}</td></tr>
+    </table>
+    <table style="margin-top:4px"><tr><td style="width:12%">申請事項</td><td>${CBc}新設　${CB}負責人變更　${CB}經營者變更　${CB}停車場名稱變更　${CB}停車位數量變更　${CB}收費標準方式變更　${CB}竣工申報　${CB}其他事項</td></tr></table>
+    <table style="margin-top:4px">
+     <tr><td colspan="4" style="text-align:center;font-weight:bold">停車場設備與營運概要</td></tr>
+     <tr><td style="width:17%">停車場名稱</td><td style="width:33%">${P.pn}</td><td style="width:15%">停車場形式</td><td>${CB}平面式 ${CB}立體式 ${CB}機械式 ${CB}塔台式 ${CB}其他</td></tr>
+     <tr><td>停車場地址</td><td>${P.ad}</td><td>地號</td><td>${B}</td></tr>
+     <tr><td>使用分區及編定類別</td><td>${CB}都市計畫 ${B} 區 ${B} 用地　${CB}非都市 ${B} 區 ${B} 用地</td><td>電話</td><td>${V(P.tel)}</td></tr>
+     <tr><td>總車位數</td><td>大型車 ${B}　小型車 ${P.st||B}　機車 ${P.mo||B}</td><td>臨接道路寬</td><td>${B} 公尺</td></tr>
+     <tr><td>專用格位數</td><td colspan="3">身障汽車格 ${B}　身障機車格 ${B}　孕婦／育6歲以下兒童者車 ${B}　電動汽車充電專用車位 ${B}</td></tr>
+     <tr><td>收費標準與方式</td><td>${P.fe||B}</td><td>營業時間</td><td>${P.hr||B}</td></tr>
+     <tr><td>身障者使用身障車位優惠</td><td>${CB}否　${CB}有，優惠方式 ${B}</td><td>緩衝時間</td><td>入場 ${B} 分　出場 ${B} 分</td></tr>
+     <tr><td>輪椅使用者繳費設施<br>（可複選）</td><td colspan="3">${CB}繳費機高度可供輪椅者使用　${CB}人工收費　${CB}提供 QR Code／APP 等多元繳費　${CB}其他 ${B}</td></tr>
+     <tr><td>停車格位剩餘數介接</td><td colspan="3">${CB}已介接本府交通智慧運輸系統平台　${CB}尚未介接，配合本府於限期內完成　${CB}其他 ${B}</td></tr>
+    </table>
+    <table style="margin-top:4px"><tr><td colspan="4" style="text-align:center;font-weight:bold">變更事項對照表（申請變更時填）</td></tr>
+     <tr><th>變更前</th><th>變更後</th><th>原領登記證字號</th><th>說明</th></tr>
+     <tr style="height:34px"><td></td><td></td><td></td><td></td></tr></table>
+    <div style="font-size:11px;margin-top:8px;line-height:1.6">附註：填列本表前，請閱覽申請須知，並檢附規定文件送審。正本 1 份、副本 2 份，除停車場配置圖外一律 A4 直式橫書、左側裝訂；影本簽註「影本與正本相符」並蓋負責人印章。</div>
+  </div>`;
+  document.getElementById('docPreview').innerHTML='<div class="no-print" style="margin-bottom:10px"><button class="btn" onclick="window.print()">🖨 列印／存PDF（A4）</button><span class="hint" style="margin-left:8px">宜蘭縣官方格式（附件一 經營登記申請書）；□框可直接點選，空白欄可手寫或先在①基本資料填好</span></div>'+form;
 }
 let ofLands=[]; // 官方表格土地標示多筆
 function genOfficialMiaoli(){

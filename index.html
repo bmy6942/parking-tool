@@ -338,6 +338,8 @@ footer{text-align:center;font-size:12px;color:#999;padding:18px;}
     </div>
     <div class="hint">點擊圖中車位可標記「停用」（柱位、樹、障礙物）。本圖為規劃草圖，正式申請圖說須由建築師或技師依縣市規定繪製。</div>
     <div class="stat-cards" id="lotStats"></div>
+    <h3 style="margin-top:12px">停車場法規合規檢核</h3>
+    <div id="lotCompliance"></div>
   </div>
   <div class="card"><h2>配置圖</h2><div id="canvasWrap"><canvas id="lotCanvas" width="1000" height="700"></canvas></div></div>
   </div><!-- /planMode0 -->
@@ -1306,6 +1308,7 @@ function drawLot(){
   const stallRowCount=rows.filter(r=>r.t==='stall').length;
   const rawTotal=stallRowCount*nPerRow;
   const accessible=Math.max(1,Math.ceil(rawTotal/50));
+  const womenBaby=rawTotal>=50?Math.ceil(rawTotal*0.02):0;
   const lastStallY=Math.max(...rows.filter(r=>r.t==='stall').map(r=>r.y));
   // 版面（留白給標題/圖例/比例尺/附註）
   const mL=90,mT=66,mR=230,mB=196;
@@ -1356,6 +1359,13 @@ function drawLot(){
           ctx.fillStyle='#2c7a45';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('無障礙',xCursor+wpx/2,ry+sl*S-6);
           xCursor+=wpx; const used=Math.ceil(aWm/sw); colsLeft-=used; placed+=used;
         }
+        for(let k=0;k<womenBaby && colsLeft>=1;k++){
+          const wpx=sw*S;
+          ctx.fillStyle='#f7d9e8';ctx.fillRect(xCursor,ry,wpx,sl*S);
+          ctx.strokeStyle='#c8579a';ctx.lineWidth=1.2;ctx.strokeRect(xCursor,ry,wpx,sl*S);
+          ctx.fillStyle='#b23c7e';ctx.font='10px sans-serif';ctx.textAlign='center';ctx.fillText('婦幼',xCursor+wpx/2,ry+sl*S/2+4);
+          xCursor+=wpx; colsLeft-=1; placed+=1;
+        }
       }
       for(let i=0;i<colsLeft;i++){
         num++;const key='s'+num;
@@ -1405,7 +1415,7 @@ function drawLot(){
   // ===== 圖例（右上）=====
   let lx=ox+siteW+24, ly=oy+4; ctx.textAlign='left';
   ctx.fillStyle='#16323d';ctx.font='bold 13px "Microsoft JhengHei",sans-serif';ctx.fillText('圖例',lx,ly+2);ly+=14;
-  const leg=[['#ffffff','#8a8a8a','標準車位 '+sw+'×'+sl],['#cfe8d6','#3a8a55','無障礙 3.5×'+sl],['#dbe9ef','#dbe9ef','行車動線／車道'],['#f2e4c9','#f2e4c9','人行步道 '+walk+'m'],['#6a4c93','#6a4c93','收費亭／管理室'],['#f2b705','#f2b705','照明'],['#c0392b','#c0392b','消防／反射鏡']];
+  const leg=[['#ffffff','#8a8a8a','標準車位 '+sw+'×'+sl],['#cfe8d6','#3a8a55','無障礙 3.5×'+sl],['#f7d9e8','#c8579a','婦幼 '+sw+'×'+sl],['#dbe9ef','#dbe9ef','行車動線／車道'],['#f2e4c9','#f2e4c9','人行步道 '+walk+'m'],['#6a4c93','#6a4c93','收費亭／管理室'],['#f2b705','#f2b705','照明'],['#c0392b','#c0392b','消防／反射鏡']];
   leg.forEach(it=>{ctx.fillStyle=it[0];ctx.fillRect(lx,ly,16,12);ctx.strokeStyle=it[1];ctx.lineWidth=1;ctx.strokeRect(lx,ly,16,12);ctx.fillStyle='#333';ctx.font='11px "Microsoft JhengHei",sans-serif';ctx.fillText(it[2],lx+22,ly+10);ly+=19;});
   // ===== 比例尺 =====
   const sbY=oy+siteH+mB-46, sb=10*S; // 10m
@@ -1430,15 +1440,36 @@ function drawLot(){
   ctx.font='10px "Microsoft JhengHei",sans-serif';ctx.fillStyle='#444';
   notes.forEach((t,i)=>ctx.fillText(t,ox,noteY+16+i*14));
   // ===== 統計 =====
-  const total=count+accessible;
+  const total=count+accessible+womenBaby;
   document.getElementById('lotStats').innerHTML=`
-   <div class="stat hl"><div class="v">${total}</div><div class="l">合計車位（含無障礙${accessible}）</div></div>
+   <div class="stat hl"><div class="v">${total}</div><div class="l">合計車位（含無障礙${accessible}${womenBaby?"／婦幼"+womenBaby:""}）</div></div>
    <div class="stat"><div class="v">${total>=50?'§24(需建照)':'§26(輕量路徑)'}</div><div class="l">適用申請條款</div></div>
    <div class="stat"><div class="v">${accessible}</div><div class="l">無障礙車位(格)</div></div>
    <div class="stat"><div class="v">${fmt(count*4)} kW</div><div class="l">車棚光電容量估算(4kW/格)</div></div>
    <div class="stat"><div class="v">${fmt(W*D)} ㎡</div><div class="l">基地面積</div></div>`;
+  var _lc=document.getElementById('lotCompliance'); if(_lc)_lc.innerHTML=lotComplianceHTML(sw,sl,aw,total,accessible,womenBaby);
 }
-document.getElementById('lotCanvas').addEventListener('click',e=>{
+function lotComplianceHTML(sw,sl,aw,total,accessible,womenBaby){
+  const P='<span style="color:#1e8449;font-weight:bold">✅</span>',Wn='<span style="color:#b7791f;font-weight:bold">⚠</span>',F='<span style="color:#c0392b;font-weight:bold">❌</span>';
+  const need=Math.max(1,Math.ceil(total/50));
+  const wbNeed=total>=50?Math.ceil(total*0.02):0;
+  const row=(j,k,v)=>'<tr><td style="text-align:center;width:44px">'+j+'</td><td>'+k+'</td><td style="width:32%">'+v+'</td></tr>';
+  let h='<table><tr><th style="width:44px">判定</th><th>依據停車場法規之檢核項目</th><th>本案</th></tr>';
+  h+=row(sw>=2.5?P:F,'小型車位寬 ≧ 2.5 m（建築技術規則§60）',sw.toFixed(2)+' m');
+  h+=row(sl>=6?P:(sl>=5.5?Wn:F),'小型車位長 ≧ 5.5 m（建議 6.0；部分縣市要求 6.0）',sl.toFixed(2)+' m');
+  h+=row(aw>=5.5?P:F,'雙向車道淨寬 ≧ 5.5 m（單向 ≧ 3.5 m）',aw.toFixed(2)+' m');
+  h+=row(accessible>=need?P:F,'無障礙車位：未滿50設1，每滿50加1（寬3.5m含下車區）','需 '+need+' 格／已配 '+accessible+' 格');
+  h+=row(total<50?P:(womenBaby>=wbNeed?P:Wn),'婦幼車位：公共停車場 ≧50 格設 2%（無條件進位）',total>=50?('需 '+wbNeed+' 格／已配 '+womenBaby+' 格'):'未達50格，免設');
+  h+=row(total<50?P:Wn,total<50?'未達50格 → 適用§26（報請核備領登記證）':'50格以上 → 適用§24（需建照）＋宜設進出分離雙出入口',total+' 格');
+  h+=row(P,'出入口寬 ≧ 3.5 m、內側轉彎半徑 ≧ 5.0 m','圖示 3.5m／R=5.0m');
+  h+=row(P,'出入口內側緩衝／等候空間 6～7 m（小型車6×6m）','圖示 7.0m');
+  h+=row(Wn,'車道坡度 ≦ 1:6、車位／車道淨高 ≧ 2.1 m','須另附剖面圖確認');
+  h+=row(Wn,'出入口距交叉口／人行穿越道／公車招呼站 ≧ 7.5 m','須現場放樣確認');
+  h+=row(P,'標線、標誌、號誌、反射鏡、照明、消防、排水','圖上已標示');
+  h+='</table><div class="hint">✅符合｜⚠須現場/剖面確認或補足｜❌未達法定最小值，請調整參數。實際尺寸與退距以各縣市停車場管理自治條例及建管審查為準。</div>';
+  return h;
+}
+document.getElementById('lotCanvas').addEventListener('click' ,e=>{
   const cv=e.target,r=cv.getBoundingClientRect();
   const x=(e.clientX-r.left)*(cv.width/r.width), y=(e.clientY-r.top)*(cv.height/r.height);
   for(const s of stallRects){

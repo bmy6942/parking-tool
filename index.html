@@ -863,6 +863,8 @@ function genOfficial(){
   const county=(document.getElementById('f_county')||{}).value||'通用';
   if(county==='苗栗縣'){genOfficialMiaoli();return;}
   if(county==='宜蘭縣'){genOfficialYilan();return;}
+  if(county==='臺北市'){genOfficialTaipei();return;}
+  if(county==='新北市'){genOfficialXinbei();return;}
   const cd=(typeof DOC_COUNTY!=='undefined')&&DOC_COUNTY[county];
   if(cd){ // 有官方表格但工具尚未內建列印版 → 強制走官方，不提供自製格式作為正式件
     document.getElementById('docPreview').innerHTML='<div class="notice" style="border-left:4px solid #c0392b">⚠ <b>'+county+'訂有官方制式表格，正式申請一律使用官方格式</b>，本工具不提供自製格式作為送件文件。<br>請至下列官方來源下載填寫：'+cd.forms.map(x=>x[1]==='local'?'<b>'+x[0]+'</b>':'<a href="'+x[1]+'" target="_blank">'+x[0]+'</a>').join('｜')+'<br>（下方為內容參考草稿，僅供備妥資料之用，切勿作為正式送件表格。）</div>';
@@ -906,6 +908,70 @@ function genOfficialYilan(){
     <div style="font-size:11px;margin-top:8px;line-height:1.6">附註：填列本表前，請閱覽申請須知，並檢附規定文件送審。正本 1 份、副本 2 份，除停車場配置圖外一律 A4 直式橫書、左側裝訂；影本簽註「影本與正本相符」並蓋負責人印章。</div>
   </div>`;
   document.getElementById('docPreview').innerHTML='<div class="no-print" style="margin-bottom:10px"><button class="btn" onclick="window.print()">🖨 列印／存PDF（A4）</button><span class="hint" style="margin-left:8px">宜蘭縣官方格式（附件一 經營登記申請書）；□框可直接點選，空白欄可手寫或先在①基本資料填好</span></div>'+form;
+}
+function genOfficialTaipei(){
+  const g=id=>fv(id,'');const B='<span class="offfill">&nbsp;</span>';
+  const CB='<input type="checkbox" class="offcb">';const CBc='<input type="checkbox" class="offcb" checked>';
+  const P={co:g('f_company'),ow:g('f_owner'),tax:g('f_taxid'),tel:g('f_tel'),ad:g('f_addr'),pn:g('f_pname'),st:g('f_stalls'),mo:g('f_moto'),fe:g('f_fee'),hr:g('f_hours')};
+  const V=v=>v||'<span class="offfill">&nbsp;&nbsp;</span>';
+  const form=`<div class="offpage offform">
+    <div style="text-align:right;font-size:12px">附表1</div>
+    <div style="text-align:center;font-size:19px;font-weight:bold;margin-bottom:2px">臺北市停車場營業登記申請書</div>
+    <div style="text-align:center;font-size:12px;margin-bottom:6px">中華民國　${B}　年　${B}　月　${B}　日</div>
+    <table>
+     <tr><td rowspan="3" style="width:7%;text-align:center">申<br>請<br>者</td><td style="width:16%">名稱</td><td>${P.co}</td><td style="width:16%;text-align:center">法人印鑑欄<br><span style="color:#888;font-size:11px">（用印處）</span></td><td style="width:16%;text-align:center">負責人印鑑欄<br><span style="color:#888;font-size:11px">（用印處）</span></td></tr>
+     <tr><td>地址</td><td colspan="3">${V(P.ad)}</td></tr>
+     <tr><td>形態</td><td colspan="3">${CB}公司　${CB}合夥　${CB}獨資　${CB}其他</td></tr>
+     <tr><td style="text-align:center">負責人</td><td>負責人姓名</td><td>${V(P.ow)}</td><td colspan="2">出生年月日 ${B}　身分證統一編號 ${V(P.tax)}<br>戶籍住址 ${V(P.ad)}</td></tr>
+    </table>
+    <table style="margin-top:4px"><tr><td style="width:12%">申請事項</td><td>${CBc}新設/展延　${CB}負責人變更　${CB}停車場名稱變更　${CB}停車位數量變更　${CB}收費標準變更　${CB}營業時間變更　${CB}其他事項</td></tr></table>
+    <table style="margin-top:4px">
+     <tr><td colspan="4" style="text-align:center;font-weight:bold">停車場設備與營運概要</td></tr>
+     <tr><td style="width:16%">停車場名稱</td><td style="width:34%">${P.pn}</td><td style="width:14%">停車場型式</td><td>${CB}平面式（${CB}一般空地 ${CB}建物附設 ${CB}堤外/橋下）${CB}立體式 ${CB}機械式 ${CB}塔台式</td></tr>
+     <tr><td>停車場地址</td><td>${P.ad}</td><td>經營型態</td><td>${CB}本處公有（${CB}自營 ${CB}委外）${CB}市屬機關學校 ${CB}中央行政機關 ${CB}私有</td></tr>
+     <tr><td>專用格位數</td><td colspan="3">身障汽車格 ${B}　身障機車格 ${B}　孕婦／育6歲以下兒童者車 ${B}　電動汽車充電專用車位 ${B}</td></tr>
+     <tr><td>總格位數<br>（含專用格位）</td><td colspan="3">大客車 ${B}　小型車 ${P.st||B}　機車 ${P.mo||B}　大型重型機車 ${B}</td></tr>
+     <tr><td>停車場電話</td><td>現場：${V(P.tel)}　文件聯絡人：${B}</td><td>收費方式</td><td>${CB}現金 ${CB}悠遊卡/悠遊付 ${CB}信用卡 ${CB}智慧支付</td></tr>
+     <tr><td>收費標準</td><td>${P.fe||B}</td><td>營業時間</td><td>${P.hr||B}</td></tr>
+    </table>
+    <table style="margin-top:4px"><tr><td colspan="4" style="text-align:center;font-weight:bold">變更事項對照表（申請變更時填）</td></tr>
+     <tr><th>變更前</th><th>變更後</th><th>原領登記證字號</th><th>備註</th></tr>
+     <tr style="height:34px"><td></td><td></td><td></td><td></td></tr></table>
+    <div style="font-size:10px;margin-top:8px;line-height:1.6">註：展延/變更負責人、收費標準、營業時間者，申請時應繳回舊證；平面停車場請填列所在地號；營業時間與開放時間不同者請附註開放時間；收費依交通部定型化契約費率標示（未滿1小時/30分以1小時/30分計）；孕婦/育6歲以下兒童車位2%（未滿50設1、未滿25不在此限）；電動汽車充電位：公有≥2%、民營≥1%。另須併附 附表2 管理規範、附表3 配置圖、附表4 位置圖、附表5 收費告示牌、附表6 個資檔案安全維護計畫（月/年租格位者）。</div>
+  </div>`;
+  document.getElementById('docPreview').innerHTML='<div class="no-print" style="margin-bottom:10px"><button class="btn" onclick="window.print()">🖨 列印／存PDF（A4）</button><span class="hint" style="margin-left:8px">臺北市官方格式（附表1 營業登記申請書）；另須附附表2~6（管理規範、配置圖、位置圖、收費告示牌、個資計畫）</span></div>'+form;
+}
+function genOfficialXinbei(){
+  const g=id=>fv(id,'');const B='<span class="offfill">&nbsp;</span>';
+  const CB='<input type="checkbox" class="offcb">';
+  const P={co:g('f_company'),ow:g('f_owner'),tax:g('f_taxid'),tel:g('f_tel'),ad:g('f_addr'),lo:g('f_landowner'),ar:g('f_area'),st:g('f_stalls'),mo:g('f_moto'),le:g('f_lease')};
+  const V=v=>v||'<span class="offfill">&nbsp;&nbsp;</span>';
+  const townMatch=(P.ad.match(/[一-鿿]{1,4}[區鄉鎮市]/)||[''])[0];
+  let landRows=`<tr style="height:26px"><td>${townMatch}</td><td></td><td></td><td></td><td>${P.ar}</td><td>${P.lo}</td><td>謄本</td><td></td></tr>`;
+  landRows+=Array.from({length:4},()=>`<tr style="height:26px"><td></td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>`).join('');
+  const form=`<div class="offpage offform">
+    <div style="text-align:center;font-size:18px;font-weight:bold;margin-bottom:6px">新北市政府辦理利用空地申請設置臨時路外停車場申請書</div>
+    <table>
+     <tr><td style="width:20%">組織名稱</td><td>${P.co}</td><td style="width:17%">組織形態</td><td>${CB}機關 ${CB}公司 ${CB}行號 ${CB}其他</td></tr>
+     <tr><td>停車場型式</td><td>${CB}立體式　${CB}平面式</td><td>負責人／代表人</td><td>${V(P.ow)}</td></tr>
+     <tr><td>統一編號／身分證字號</td><td>${V(P.tax)}</td><td>電話</td><td>${V(P.tel)}</td></tr>
+     <tr><td>通訊地址</td><td colspan="3">${V(P.ad)}</td></tr>
+     <tr><td>申請設置地址</td><td>${P.ad}</td><td>面積(㎡)／分區</td><td>${P.ar} ／ ${B}</td></tr>
+    </table>
+    <table style="margin-top:4px"><tr><td colspan="8" style="text-align:center;font-weight:bold">土地地號標示</td></tr>
+     <tr><th>區</th><th>段</th><th>小段</th><th>地號</th><th>面積(㎡)</th><th>土地所有權人</th><th>所有權證明</th><th>都計分區</th></tr>
+     ${landRows}
+     <tr><td colspan="4" style="text-align:right">合計</td><td>${P.ar}</td><td colspan="3">平方公尺（不敷使用請浮貼並蓋負責人印章）</td></tr>
+    </table>
+    <table style="margin-top:4px">
+     <tr><td style="width:20%">提供停車種類</td><td>大型車 ${B} 格　小型車 ${P.st||B} 格　機車 ${P.mo||B} 格　其他 ${B} 格</td></tr>
+     <tr><td>申請使用期限</td><td>至中華民國 ${B} 年 ${B} 月 ${B} 日 （最長不得超過 8 年）</td></tr>
+     <tr><td>臨接道路情形</td><td>道路／巷道名稱 ${B} 寬 ${B} m　｜　道路／巷道名稱 ${B} 寬 ${B} m</td></tr>
+    </table>
+    <table class="nob" style="margin-top:8px"><tr><td>此致　新北市政府</td><td style="text-align:right">申請人：${P.co}（印章）　負責人：${P.ow}（印章）　電話：${P.tel}</td></tr></table>
+    <div style="font-size:10px;margin-top:6px;line-height:1.6">申請書一式 7 份自行裝訂（共送7冊，影本註「與正本相符」蓋章）；申請案編碼120402、公告25天。應檢附：設置申請書、土地權利證明（登記謄本簡化免附）、分區證明、建築線指示(定)圖（平面式得以周邊道路照片5張＋會勘替代）、設置計畫11款、無土石方挖填切結書、排水設施規劃圖、水保計畫（山坡地）、無建築行為不求償切結書（重劃/區徵/公保地）。身障位2%（未滿50設1；汽車≥3.3m、機車≥2.3m）；臨路側退縮淨寬≥2.5m；圍籬≤1.5m且透空率70%以上免臨建照；核准最長8年，屆滿前3個月重新申請。</div>
+  </div>`;
+  document.getElementById('docPreview').innerHTML='<div class="no-print" style="margin-bottom:10px"><button class="btn" onclick="window.print()">🖨 列印／存PDF（A4）</button><span class="hint" style="margin-left:8px">新北市官方格式（表一 臨時路外停車場申請書）；一式7份自行裝訂，土地地號多筆不敷時浮貼加蓋印章</span></div>'+form;
 }
 let ofLands=[]; // 官方表格土地標示多筆
 function genOfficialMiaoli(){
